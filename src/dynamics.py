@@ -36,13 +36,13 @@ class Dynamics(nn.Module):
         # christoffel
         g = self.embedding.christoffel(x, m)
 
-        return (torch.bmm(m.inverse(), -(self.dissipation(v)+self.stiffness(x)).unsqueeze(2)) - torch.bmm(torch.einsum('bqij,bi->bqj', g, v), v.unsqueeze(2))).squeeze()
+        return (torch.bmm(m.inverse(), -(self.dissipation(v)+self.stiffness(x-self.attractor)).unsqueeze(2)) - torch.bmm(torch.einsum('bqij,bi->bqj', g, v), v.unsqueeze(2))).squeeze()
 
     # Potential function
     def potential(self, x):
-        d = (x - self.attractor).unsqueeze(2)
+        d = x - self.attractor
 
-        return (self.stiffness.weight.matmul(d) * d).sum(axis=1)
+        return (d*self.stiffness(d)).sum(axis=1)
 
     # Attractor setter/getter
     @property
