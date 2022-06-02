@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+from matplotlib import markers
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
@@ -13,7 +14,7 @@ use_cuda = torch.cuda.is_available()
 device = torch.device("cuda" if use_cuda else "cpu")
 
 # Data
-dataset = "BendedLine"
+dataset = "Angle"
 data = np.loadtxt(os.path.join('data', '{}.csv'.format(dataset)))
 
 # Tensor data
@@ -27,8 +28,9 @@ ddx_train = data[:, 4:6]
 
 # Test data
 resolution = 100
-x_mesh, y_mesh = np.meshgrid(np.linspace(-60, 60, resolution),
-                             np.linspace(-60, 60, resolution))
+lower, upper = -0.5, 0.5
+x_mesh, y_mesh = np.meshgrid(np.linspace(lower, upper, resolution),
+                             np.linspace(lower, upper, resolution))
 x_test = np.array(
     [x_mesh.ravel(order="F"), y_mesh.ravel(order="F")]).transpose()
 X_test = np.zeros([x_test.shape[0], 2*x_test.shape[1]])
@@ -42,10 +44,10 @@ X_test = torch.from_numpy(
 
 # Net model
 dim = 2
-structure = [100, 100, 100]
-attractor = torch.tensor([0, 0]).to(device)
+structure = [100, 100]
+attractor = X[-1, :dim]
 K = torch.eye(2, 2).to(device)
-D = torch.eye(2, 2).to(device)
+D = 4*torch.eye(2, 2).to(device)
 
 ds = Dynamics(2, attractor, structure).to(device)
 ds.dissipation = (D, False)
@@ -74,7 +76,7 @@ train_embedding = ds.embedding(X[:, :2])
 train_embedding = train_embedding.cpu().detach().numpy()
 
 # Sampled Dynamics
-box_side = 10
+box_side = 0.05
 a = [x_train[0, 0] - box_side, x_train[0, 1] - box_side]
 b = [x_train[0, 0] + box_side, x_train[0, 1] + box_side]
 
@@ -119,8 +121,8 @@ ax = fig.add_subplot(111, projection="3d")
 ax.plot_surface(x_embedding, y_embedding, z_embedding,
                 facecolors=colors, antialiased=True, linewidth=0, alpha=0.5)
 fig.colorbar(mappable,  ax=ax, label=r"$\phi$")
-ax.set_box_aspect((np.ptp(x_embedding), np.ptp(
-    y_embedding), np.ptp(z_embedding)))
+# ax.set_box_aspect((np.ptp(x_embedding), np.ptp(
+#     y_embedding), np.ptp(z_embedding)))
 ax.scatter(train_embedding[::10, 0], train_embedding[::10, 1],
            train_embedding[::10, 2], s=20, edgecolors='k', c='red')
 
@@ -131,6 +133,9 @@ ax.axis('square')
 fig.colorbar(mappable,  ax=ax, label=r"$\phi$")
 for i in range(num_samples):
     ax.plot(samples[i][:, 0], samples[i][:, 1], color='k')
+ax.scatter(x_train[::10, 0], x_train[::10, 1], s=20, edgecolors='k', c='red')
+ax.scatter(x_train[-1, 0], x_train[-1, 1], s=100,
+           edgecolors='k', c='yellow', marker="*")
 rect = patches.Rectangle((x_train[0, 0] - box_side, x_train[0, 1] - box_side),
                          2*box_side, 2*box_side, linewidth=1, edgecolor='k', facecolor='none')
 ax.add_patch(rect)

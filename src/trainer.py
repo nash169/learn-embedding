@@ -58,6 +58,9 @@ class Trainer:
             mu, std = self.input.mean(0), self.input.std(0)
             self.input.sub_(mu).div_(std)
 
+        # Activate grad
+        self.input.requires_grad = True
+
         # Create dataset
         torch_dataset = torch.utils.data.TensorDataset(self.input, self.target)
 
@@ -71,7 +74,7 @@ class Trainer:
 
         # Open file
         if self.options_["record_loss"]:
-            loss_log = np.empty([1,3])
+            loss_log = np.empty([1, 3])
 
         # start training
         for epoch in range(self.options_['epochs']):
@@ -89,12 +92,13 @@ class Trainer:
                 if self.options_["print_loss"]:
                     print("EPOCH: ", epoch, "ITER: ",
                           iter, "LOSS: ", loss.item())
-                
+
                 # Record loss (EPOCH,ITER,LOSS)
                 if self.options_["record_loss"]:
                     # print(np.array([epoch,iter,loss.item()])[:,np.newaxis])
-                    loss_log = np.append(loss_log,np.array([epoch,iter,loss.item()])[np.newaxis,:],axis=0)
-                    
+                    loss_log = np.append(loss_log, np.array(
+                        [epoch, iter, loss.item()])[np.newaxis, :], axis=0)
+
                 # clear gradients for next train
                 self.optimizer.zero_grad()
 
@@ -114,7 +118,8 @@ class Trainer:
             if not os.path.exists('models'):
                 os.makedirs('models')
 
-            np.savetxt(os.path.join('models', '{}.csv'.format(self.options_["record_loss"])), loss_log)
+            np.savetxt(os.path.join('models', '{}.csv'.format(
+                self.options_["record_loss"])), loss_log)
 
     def save(self, file):
         if not os.path.exists('models'):

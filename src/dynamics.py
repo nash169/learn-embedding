@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 
+from sympy import DiagMatrix
 import torch
 import torch.nn as nn
 
 from .embedding import Embedding
+from .spd import SPD, Diagonal
 
 
 class Dynamics(nn.Module):
@@ -12,9 +14,11 @@ class Dynamics(nn.Module):
 
         self.attractor_ = attractor
 
-        self.stiffness_ = torch.nn.Linear(dim, dim, bias=False)
+        # self.stiffness_ = torch.nn.Linear(dim, dim, bias=False)
+        self.stiffness_ = Diagonal(dim)
 
-        self.dissipation_ = torch.nn.Linear(dim, dim, bias=False)
+        # self.dissipation_ = torch.nn.Linear(dim, dim, bias=False)
+        self.dissipation_ = Diagonal(dim)
 
         self.embedding = Embedding(dim, structure)
 

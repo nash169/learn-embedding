@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
-from matplotlib.pyplot import axis
 import torch
 import torch.nn as nn
+
+from .kernel_machine import KernelMachine
 
 
 class Embedding(nn.Module):
@@ -11,19 +12,23 @@ class Embedding(nn.Module):
 
         self.dim = dim
 
-        structure = [dim] + structure
+        # structure = [dim] + structure
 
-        layers = nn.ModuleList()
+        # layers = nn.ModuleList()
 
-        for i, _ in enumerate(structure[:-1]):
-            layers.append(nn.Linear(structure[i], structure[i+1]))
-            layers.append(nn.ReLU())
+        # for i, _ in enumerate(structure[:-1]):
+        #     layers.append(nn.Linear(structure[i], structure[i+1]))
+        #     layers.append(nn.Tanh())
 
-        layers.append(nn.Linear(structure[-1], 1))
+        # layers.append(nn.Linear(structure[-1], 1))
 
-        self.net_ = nn.Sequential(*(layers[i] for i in range(len(layers))))
+        # self.net_ = nn.Sequential(*(layers[i] for i in range(len(layers))))
+
+        self.net_ = KernelMachine(self.dim, 500, 1, length=0.45)
 
     def forward(self, x):
+        # self.net_.prediction_.weight.data = torch.abs(
+        #     self.net_.prediction_.weight.data)
         return torch.concat((x, self.net_(x)), axis=1)
 
     def jacobian(self, x, y):
