@@ -1,101 +1,165 @@
 #!/usr/bin/env python
 
 import os
+import sys
 import numpy as np
 import torch
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 
+from src.kernel import Kernel
+from src.feedforward import FeedForward
+from src.embedding import Embedding
+from src.parametrization import SPD, Diagonal
+from src.dynamics import Dynamics
 
-def function(x):
-    y = torch.empty(x.size(0), x.size(1)+1).to(x.device)
-
-    y[:, 0] = x[:, 0].cos()
-    y[:, 1] = x[:, 0].sin()*x[:, 1].cos()
-    y[:, 2] = x[:, 0].sin()*x[:, 1].sin()
-
-    return y
-
-
-def jacobian(x):
-    y = function(x)
-    jac = torch.empty(x.size(0), y.size(1), x.size(1)).to(x.device)
-
-    for i in range(y.size(1)):
-        jac[:, i, :] = torch.autograd.grad(
-            y[:, i], x, grad_outputs=torch.ones_like(y[:, i]), create_graph=True)[0]
-
-    return jac
-
-
-def hessian(x):
-    jac = jacobian(x)
-    hess = torch.empty(jac.size(0), jac.size(
-        1), jac.size(2), x.size(1)).to(x.device)
-
-    for i in range(jac.size(1)):
-        for j in range(jac.size(2)):
-            hess[:, i, j, :] = torch.autograd.grad(
-                jac[:, i, j], x, grad_outputs=torch.ones_like(jac[:, i, j]), create_graph=True)[0]
-
-    return hess
-
-
-def metric(x):
-    jac = jacobian(x)
-    return torch.matmul(jac.permute(0, 2, 1), jac)
-
-
-def metric_grad(x):
-    m = metric(x)
-    dm = torch.empty(m.size(0), m.size(
-        1), m.size(2), x.size(1)).to(x.device)
-
-    for i in range(m.size(1)):
-        for j in range(m.size(2)):
-            dm[:, i, j, :] = torch.autograd.grad(
-                m[:, i, j], x, grad_outputs=torch.ones_like(m[:, i, j]), create_graph=True)[0]
-
-    return dm
-
-
-def christoffel(x):
-    m = metric(x)
-    im = m.inverse()
-    dm = torch.empty(m.size(0), m.size(
-        1), m.size(2), x.size(1)).to(x.device)
-
-    for i in range(m.size(1)):
-        for j in range(m.size(2)):
-            dm[:, i, j, :] = torch.autograd.grad(
-                m[:, i, j], x, grad_outputs=torch.ones_like(m[:, i, j]), create_graph=True)[0]
-
-    return 0.5 * (torch.einsum('bqm,bmji->bqji', im, dm + dm.permute(0, 1, 3, 2)) - torch.einsum('bqm,bijm->bqij', im, dm))
-
-    # return 0.5*(torch.tensordot(im, dm + dm.permute(0, 1, 3, 2), dims=([2], [1])) - torch.tensordot(im, dm, dims=([2], [3])))
-
+# User input
+dataset = sys.argv[1] if len(sys.argv) > 1 else "Angle"
 
 # CPU/GPU setting
 use_cuda = torch.cuda.is_available()
 device = torch.device("cuda" if use_cuda else "cpu")
 
-# x = torch.tensor([[1, 1], [3, 2]], dtype=float).requires_grad_(True)
-x = torch.tensor([[0.933993247757551, 0.678735154857773], [1, 1], [2, 2]],
-                 dtype=float).requires_grad_(True)
+# Data
+data = np.loadtxt(os.path.join('data', '{}.csv'.format(dataset)))
+dim = int(data.shape[1]/3)
+
+# Tensor data
+X = torch.from_numpy(data[:, :dim]).float().to(device).requires_grad_(True)
+Y = torch.from_numpy(data[:, dim:]).float().to(device).requires_grad_(True)
+
+# Plot data
+x_train = data[:, :2]
+dx_train = data[:, 2:4]
+ddx_train = data[:, 4:6]
+
+# Test data
+resolution = 100
+lower, upper = -0.5, 0.5
+x_mesh, y_mesh = np.meshgrid(np.linspace(lower, upper, resolution),
+                             np.linspace(lower, upper, resolution))
+x_test = np.array(
+    [x_mesh.ravel(order="F"), y_mesh.ravel(order="F")]).transpose()
+X_test = np.zeros([x_test.shape[0], 2*x_test.shape[1]])
+X_test[:, :x_test.shape[1]] = x_test
+
+x_test = torch.from_numpy(
+    x_test).float().to(device).requires_grad_(True)
+X_test = torch.from_numpy(
+    X_test).float().to(device).requires_grad_(True)
 
 
-print("Embedding")
-print(function(x))
+# Function approximator
+kernel = Kernel(dim, 500, 1, length=0.45)
+# feedforward = FeedForward(dim, [100, 100], 1)
 
-print("Jacobian")
-print(jacobian(x))
+# Embedding
+embedding = Embedding(kernel)
 
-print("Hessian")
-print(hessian(x))
+# Attractor
+attractor = X[-1, :dim]
 
-print("Metric")
-print(metric(x))
+# Stiffness
+stiffness = Diagonal(dim)
 
-print("Metric Grad")
-print(metric_grad(x))
+# Dissipation
+dissipation = Diagonal(dim)
 
-print("Christoffel")
-print(christoffel(x))
+# Dynamics
+ds = Dynamics(attractor, stiffness, dissipation, embedding).to(device)
+
+# Load dict
+ds.load_state_dict(torch.load(os.path.join(
+    'models', '{}.pt'.format(dataset)), map_location=torch.device(device)))
+ds.eval()
+
+# Potential
+phi = ds.potential(x_test)
+phi = phi.cpu().detach().numpy()
+phi = phi.reshape(resolution, -1, order="F")
+phi -= np.min(phi)
+phi /= np.max(phi)
+colors = plt.cm.jet(phi)
+mappable = plt.cm.ScalarMappable(cmap=plt.cm.jet)
+mappable.set_array(phi)
+
+# Embedding
+embedding = ds.embedding(x_test)
+embedding = embedding.cpu().detach().numpy()
+x_embedding = embedding[:, 0].reshape(resolution, -1, order="F")
+y_embedding = embedding[:, 1].reshape(resolution, -1, order="F")
+z_embedding = embedding[:, 2].reshape(resolution, -1, order="F")
+train_embedding = ds.embedding(X[:, :2])
+train_embedding = train_embedding.cpu().detach().numpy()
+
+# Sampled Dynamics
+box_side = 0.05
+a = [x_train[0, 0] - box_side, x_train[0, 1] - box_side]
+b = [x_train[0, 0] + box_side, x_train[0, 1] + box_side]
+
+T = 1
+dt = 0.01
+steps = int(np.ceil(T/dt))
+num_samples = 3
+samples = []
+
+for i in range(num_samples):
+    state = np.zeros([steps, 2*dim])
+    state[0, 0] = np.random.uniform(a[0], b[0])
+    state[0, 1] = np.random.uniform(a[1], b[1])
+    samples.append(state)
+
+for step in range(steps-1):
+    for i in range(num_samples):
+        X_sample = torch.from_numpy(samples[i][step, :]).float().to(
+            device).requires_grad_(True).unsqueeze(0)
+        samples[i][step+1, dim:] = samples[i][step, dim:] + \
+            dt*ds(X_sample).cpu().detach().numpy()
+        samples[i][step+1, :dim] = samples[i][step, :dim] + \
+            dt*samples[i][step+1, dim:]
+
+# Vector Field
+field = X_test[:, dim:] + dt * ds(X_test)
+field = field.cpu().detach().numpy()
+x_field = field[:, 0].reshape(resolution, -1, order="F")
+y_field = field[:, 1].reshape(resolution, -1, order="F")
+
+# Plot
+fig = plt.figure()
+ax = fig.add_subplot(111)
+contour = ax.contourf(x_mesh, y_mesh, phi, 500, cmap="jet")
+ax.contour(x_mesh, y_mesh, phi, 10, cmap=None, colors='#f2e68f')
+fig.colorbar(mappable,  ax=ax, label=r"$\phi$")
+ax.scatter(x_train[::10, 0], x_train[::10, 1], s=20, edgecolors='k', c='red')
+ax.axis('square')
+
+fig = plt.figure()
+ax = fig.add_subplot(111, projection="3d")
+ax.plot_surface(x_embedding, y_embedding, z_embedding,
+                facecolors=colors, antialiased=True, linewidth=0, alpha=0.5)
+fig.colorbar(mappable,  ax=ax, label=r"$\phi$")
+# ax.set_box_aspect((np.ptp(x_embedding), np.ptp(
+#     y_embedding), np.ptp(z_embedding)))
+ax.scatter(train_embedding[::10, 0], train_embedding[::10, 1],
+           train_embedding[::10, 2], s=20, edgecolors='k', c='red')
+
+fig = plt.figure()
+ax = fig.add_subplot(111)
+ax.streamplot(x_mesh, y_mesh, x_field, y_field, color=phi, cmap="jet")
+ax.axis('square')
+fig.colorbar(mappable,  ax=ax, label=r"$\phi$")
+for i in range(num_samples):
+    ax.plot(samples[i][:, 0], samples[i][:, 1], color='k')
+ax.scatter(x_train[::10, 0], x_train[::10, 1], s=20, edgecolors='k', c='red')
+ax.scatter(x_train[-1, 0], x_train[-1, 1], s=100,
+           edgecolors='k', c='yellow', marker="*")
+rect = patches.Rectangle((x_train[0, 0] - box_side, x_train[0, 1] - box_side),
+                         2*box_side, 2*box_side, linewidth=1, edgecolor='k', facecolor='none')
+ax.add_patch(rect)
+
+# fig = plt.figure()
+# ax = fig.add_subplot(111)
+# ax.scatter(x_train[::10, 0], x_train[::10, 1], s=20, edgecolors='k', c='red')
+# ax.quiver()
+
+plt.show()

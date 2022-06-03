@@ -131,6 +131,7 @@ class Trainer:
     def load(self, file):
         self.model.load_state_dict(torch.load(
             os.path.join('models', '{}.pt'.format(file)), map_location=torch.device(self.input.device)))
+        self.model.eval()
 
     # Model
     @property

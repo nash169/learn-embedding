@@ -3,32 +3,14 @@
 import torch
 import torch.nn as nn
 
-from .kernel_machine import KernelMachine
-
 
 class Embedding(nn.Module):
-    def __init__(self, dim, structure=[10, 10]):
+    def __init__(self, approximator):
         super(Embedding, self).__init__()
 
-        self.dim = dim
-
-        # structure = [dim] + structure
-
-        # layers = nn.ModuleList()
-
-        # for i, _ in enumerate(structure[:-1]):
-        #     layers.append(nn.Linear(structure[i], structure[i+1]))
-        #     layers.append(nn.Tanh())
-
-        # layers.append(nn.Linear(structure[-1], 1))
-
-        # self.net_ = nn.Sequential(*(layers[i] for i in range(len(layers))))
-
-        self.net_ = KernelMachine(self.dim, 500, 1, length=0.45)
+        self.net_ = approximator
 
     def forward(self, x):
-        # self.net_.prediction_.weight.data = torch.abs(
-        #     self.net_.prediction_.weight.data)
         return torch.concat((x, self.net_(x)), axis=1)
 
     def jacobian(self, x, y):
@@ -51,8 +33,13 @@ class Embedding(nn.Module):
 
         return hess
 
-    def metric(self, jac):
+    def pullmetric(self, jac):
         return torch.matmul(jac.permute(0, 2, 1), jac)
+
+    def metric(self, x):
+        y = self.forward(x)
+        g = torch.eye(y.shape[1])
+        return g.repeat(1, 1, y.shape[0])
 
     def christoffel(self, x, m):
         im = m.inverse()
@@ -70,12 +57,3 @@ class Embedding(nn.Module):
         if isinstance(m, nn.Linear):
             nn.init.normal_(m.weight, mean=0.0, std=0.1)
             nn.init.constant_(m.bias, 0.1)
-
-    # Dimension setter/getter
-    @property
-    def dim(self):
-        return self.dim_
-
-    @dim.setter
-    def dim(self, value):
-        self.dim_ = value

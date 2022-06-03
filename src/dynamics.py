@@ -1,32 +1,26 @@
 #!/usr/bin/env python
 
-from sympy import DiagMatrix
 import torch
 import torch.nn as nn
 
-from .embedding import Embedding
-from .spd import SPD, Diagonal
-
 
 class Dynamics(nn.Module):
-    def __init__(self, dim, attractor, structure=[10, 10]):
+    def __init__(self, attractor, stiffness, dissipation, embedding):
         super(Dynamics, self).__init__()
 
-        self.attractor_ = attractor
+        self.attractor = attractor
 
-        # self.stiffness_ = torch.nn.Linear(dim, dim, bias=False)
-        self.stiffness_ = Diagonal(dim)
+        self.stiffness = stiffness
 
-        # self.dissipation_ = torch.nn.Linear(dim, dim, bias=False)
-        self.dissipation_ = Diagonal(dim)
+        self.dissipation = dissipation
 
-        self.embedding = Embedding(dim, structure)
+        self.embedding = embedding
 
     # Forward network pass
     def forward(self, X):
         # data
-        x = X[:, :self.embedding.dim]
-        v = X[:, self.embedding.dim:]
+        x = X[:, :int(X.shape[1]/2)]
+        v = X[:, int(X.shape[1]/2):]
 
         # embedding
         f = self.embedding(x)
@@ -35,7 +29,7 @@ class Dynamics(nn.Module):
         j = self.embedding.jacobian(x, f)
 
         # metric
-        m = self.embedding.metric(j)
+        m = self.embedding.pullmetric(j)
 
         # christoffel
         g = self.embedding.christoffel(x, m)
@@ -64,7 +58,7 @@ class Dynamics(nn.Module):
 
     @stiffness.setter
     def stiffness(self, value):
-        self.stiffness_.weight = nn.Parameter(value[0], requires_grad=value[1])
+        self.stiffness_ = value
 
     # Dissipative matrix setter/getter
     @property
@@ -73,8 +67,7 @@ class Dynamics(nn.Module):
 
     @dissipation.setter
     def dissipation(self, value):
-        self.dissipation_.weight = nn.Parameter(
-            value[0], requires_grad=value[1])
+        self.dissipation_ = value
 
     # Diffeomorphism setter/getter
     @property

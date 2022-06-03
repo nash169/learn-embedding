@@ -8,10 +8,9 @@ from torch.distributions.multivariate_normal import MultivariateNormal
 from torch.distributions.uniform import Uniform
 
 
-class KernelMachine(nn.Module):  # inheriting from nn.Module!
-
+class Kernel(nn.Module):
     def __init__(self, dim, num_features, match_dim, length=1):
-        super(KernelMachine, self).__init__()
+        super(Kernel, self).__init__()
 
         # Number of samples
         self.num_features_ = num_features
