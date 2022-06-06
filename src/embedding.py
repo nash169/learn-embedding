@@ -33,13 +33,9 @@ class Embedding(nn.Module):
 
         return hess
 
-    def pullmetric(self, jac):
-        return torch.matmul(jac.permute(0, 2, 1), jac)
-
-    def metric(self, x):
-        y = self.forward(x)
-        g = torch.eye(y.shape[1])
-        return g.repeat(1, 1, y.shape[0])
+    def pullmetric(self, y, jac):
+        return torch.bmm(jac.permute(0, 2, 1), torch.bmm(self.metric(y), jac))
+        # return torch.matmul(jac.permute(0, 2, 1), jac)
 
     def christoffel(self, x, m):
         im = m.inverse()
@@ -57,3 +53,12 @@ class Embedding(nn.Module):
         if isinstance(m, nn.Linear):
             nn.init.normal_(m.weight, mean=0.0, std=0.1)
             nn.init.constant_(m.bias, 0.1)
+
+    # Ambient space metric
+    @property
+    def metric(self):
+        return self.metric_
+
+    @metric.setter
+    def metric(self, value):
+        self.metric_ = value
