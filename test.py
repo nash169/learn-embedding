@@ -55,8 +55,8 @@ X_test = torch.from_numpy(
     X_test).float().to(device).requires_grad_(True)
 
 # Function approximator
-approximator = KernelMachine(dim, 1000, 1, length=0.45)
-# approximator = FeedForward(dim, [100, 100], 1)
+approximator = KernelMachine(dim, 1000, 1, length=0.4)
+# approximator = FeedForward(dim, [10, 10], 1)
 # layers = nn.ModuleList()
 # layers.append(KernelMachine(dim, 250, dim+1, length=0.45))
 # for i in range(2):
@@ -88,7 +88,7 @@ ds.load_state_dict(torch.load(os.path.join(
 ds.eval()
 
 # Obstacle
-a_obs, b_obs, eta = 1, 2, 100
+a_obs, b_obs, eta = 1, 3, 100
 r = 0.1
 x_obs = torch.tensor([[-0.3000,   0.0000]]).to(device)
 y_obs = ds.embedding(x_obs)
@@ -99,7 +99,7 @@ if obstacle:
     #     return torch.eye(y.shape[1]).repeat(y.shape[0], 1, 1).to(device)*n
 
     def metric(y):
-        d = (torch.norm(y-y_obs, dim=1) + r).unsqueeze(1).unsqueeze(2) + 1
+        d = (torch.norm(y-y_obs, dim=1) + r+0.05).unsqueeze(1).unsqueeze(2) + 1
         dd = 0.5*(y-y_obs)/torch.norm(y-y_obs, dim=1).unsqueeze(1)
         return torch.bmm(dd.unsqueeze(2), dd.unsqueeze(1)) * torch.exp(a_obs/(b_obs*torch.pow(d, b_obs))) + 0.01*torch.eye(y.shape[1]).repeat(y.shape[0], 1, 1).to(y.device)
 else:
@@ -132,7 +132,7 @@ if not first:
     a = [x_train[0, 0] - box_side, x_train[0, 1] - box_side]
     b = [x_train[0, 0] + box_side, x_train[0, 1] + box_side]
 
-    T = 1
+    T = 5
     dt = 0.01
     steps = int(np.ceil(T/dt))
     num_samples = 3
@@ -172,6 +172,9 @@ ax.scatter(x_train[::10, 0], x_train[::10, 1],
            s=20, edgecolors='k', c='red')
 ax.axis('square')
 
+ax.set_xlabel('$x^1$')
+ax.set_ylabel('$x^2$')
+
 fig = plt.figure()
 ax = fig.add_subplot(111, projection="3d")
 ax.plot_surface(x_embedding, y_embedding, z_embedding,
@@ -187,9 +190,13 @@ if obstacle:
     u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
     obs_x = y_obs[0, 0] + r*np.cos(u)*np.sin(v)
     obs_y = y_obs[0, 1] + r*np.sin(u)*np.sin(v)
-    obs_z = y_obs[0, 2] + r*np.cos(v)
+    obs_z = y_obs[0, 2] + 4.5*np.cos(v)
     ax.plot_surface(obs_x, obs_y, obs_z, linewidth=0.0,
                     cstride=1, rstride=1)
+
+ax.set_xlabel('$y^1$')
+ax.set_ylabel('$y^2$')
+ax.set_zlabel('$y^3$')
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
@@ -214,6 +221,9 @@ if obstacle:
     circ = plt.Circle((x_obs[0, 0], x_obs[0, 1]), r,
                       color='k', fill='grey', alpha=0.5)
     ax.add_patch(circ)
+
+ax.set_xlabel('$x^1$')
+ax.set_ylabel('$x^2$')
 
 # fig = plt.figure()
 # ax = fig.add_subplot(111)

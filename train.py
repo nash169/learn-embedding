@@ -38,8 +38,8 @@ X = torch.from_numpy(data[:, :2*dim]).float().to(device)
 Y = torch.from_numpy(data[:, 2*dim:]).float().to(device)
 
 # Function approximator
-approximator = KernelMachine(dim, 1000, 1, length=0.45)
-# approximator = FeedForward(dim, [100, 100], 1)
+approximator = KernelMachine(dim, 1000, 1, length=0.4)
+# approximator = FeedForward(dim, [10, 10], 1)
 # layers = nn.ModuleList()
 # layers.append(KernelMachine(dim, 250, dim+1, length=0.45))
 # for i in range(2):
@@ -77,7 +77,7 @@ else:
 
 # Set trainer optimizer (this is not very clean)
 trainer.optimizer = torch.optim.Adam(
-    trainer.model.parameters(), lr=1e-2,  weight_decay=1e-3)
+    trainer.model.parameters(), lr=1e-2,  weight_decay=1e-6)
 
 # Set trainer loss
 trainer.loss = torch.nn.MSELoss()

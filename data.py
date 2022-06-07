@@ -10,6 +10,7 @@ from src.utils import linear_map
 
 dataset = sys.argv[1] if len(sys.argv) > 1 else "Angle"
 num_trajs = int(sys.argv[2]) if len(sys.argv) > 2 else 1
+init_cut = 50
 
 data = sio.loadmat(os.path.join('data', '{}.mat'.format(dataset)))
 data = data['demos']
@@ -53,9 +54,9 @@ for i in range(num_trajs):
     trajs.append(np.concatenate((t, x, v, a), axis=1))
 
 
-trainset = trajs[0][:, 1:]
+trainset = trajs[0][init_cut:, 1:]
 for i in range(1, num_trajs):
-    trainset = np.append(trainset, trajs[i][:, 1:], axis=0)
+    trainset = np.append(trainset, trajs[i][init_cut:, 1:], axis=0)
 
 np.savetxt('data/' + dataset + '.csv', trainset)
 
@@ -64,11 +65,11 @@ ax = fig.add_subplot(111)
 colors = ["#377eb8", "#ff7f00", "#4daf4a", "#f781bf",
           "#a65628", "#984ea3", "#999999", "#e41a1c", "#dede00", ]
 for i in range(num_trajs):
-    ax.scatter(trajs[i][::10, 1], trajs[i][::10, 2],
+    ax.scatter(trajs[i][init_cut::10, 1], trajs[i][init_cut::10, 2],
                s=20, edgecolors='k', c=colors[i])
-    ax.quiver(trajs[i][::10, 1], trajs[i][::10, 2],
-              trajs[i][::10, 3], trajs[i][::10, 4], scale=100, width=0.002, color='r')
-    ax.quiver(trajs[i][::10, 1], trajs[i][::10, 2],
-              trajs[i][::10, 5], trajs[i][::10, 6], scale=100, width=0.002, color='b')
+    ax.quiver(trajs[i][init_cut::10, 1], trajs[i][init_cut::10, 2],
+              trajs[i][init_cut::10, 3], trajs[i][init_cut::10, 4], scale=100, width=0.002, color='r')
+    ax.quiver(trajs[i][init_cut::10, 1], trajs[i][init_cut::10, 2],
+              trajs[i][init_cut::10, 5], trajs[i][init_cut::10, 6], scale=100, width=0.002, color='b')
 
 plt.show()
