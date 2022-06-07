@@ -5,7 +5,7 @@ import torch.nn as nn
 
 
 class DynamicsFirst(nn.Module):
-    def __init__(self, attractor, stiffness, dissipation, embedding):
+    def __init__(self, attractor, stiffness, embedding):
         super(DynamicsFirst, self).__init__()
 
         self.attractor = attractor

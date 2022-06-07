@@ -12,6 +12,7 @@ class Embedding(nn.Module):
 
     def forward(self, x):
         return torch.concat((x, self.net_(x)), axis=1)
+        # return self.net_(x)
 
     def jacobian(self, x, y):
         jac = torch.empty(x.size(0), y.size(1), x.size(1)).to(x.device)

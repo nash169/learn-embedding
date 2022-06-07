@@ -3,13 +3,17 @@
 import os
 import sys
 import numpy as np
+from sympy import approximants
 import torch
+import torch.nn as nn
 
-from src.kernel import Kernel
+from src.kernel_machine import KernelMachine
+from src.coupling_layer import CouplingLayer
 from src.feedforward import FeedForward
 from src.embedding import Embedding
-from src.parametrization import SPD, Diagonal
+from src.parametrization import SPD, Diagonal, Spherical
 from src.dynamics_second import DynamicsSecond
+from src.dynamics_first import DynamicsFirst
 from src.trainer import Trainer
 
 
@@ -17,6 +21,7 @@ from src.trainer import Trainer
 dataset = sys.argv[1] if len(sys.argv) > 1 else "Angle"
 load = sys.argv[2].lower() in ['true', '1', 't', 'y', 'yes',
                                'load'] if len(sys.argv) > 2 else False
+first = False
 
 # CPU/GPU setting
 use_cuda = torch.cuda.is_available()
@@ -33,11 +38,16 @@ X = torch.from_numpy(data[:, :2*dim]).float().to(device)
 Y = torch.from_numpy(data[:, 2*dim:]).float().to(device)
 
 # Function approximator
-kernel = Kernel(dim, 1000, 1, length=0.45)
-# feedforward = FeedForward(dim, [100, 100], 1)
+approximator = KernelMachine(dim, 1000, 1, length=0.45)
+# approximator = FeedForward(dim, [100, 100], 1)
+# layers = nn.ModuleList()
+# layers.append(KernelMachine(dim, 250, dim+1, length=0.45))
+# for i in range(2):
+#     layers.append(CouplingLayer(dim+1, 250, i % 2, 0.45))
+# approximator = nn.Sequential(*(layers[i] for i in range(len(layers))))
 
 # Embedding
-embedding = Embedding(kernel)
+embedding = Embedding(approximator)
 
 
 def metric(y):
@@ -51,24 +61,27 @@ embedding.metric = metric
 attractor = X[-1, :dim]
 
 # Stiffness
-stiffness = Diagonal(dim)
+stiffness = Spherical(dim)
 
 # Dissipation
-dissipation = Diagonal(dim)
+dissipation = Spherical(dim)
 
-# Dynamics
-ds = DynamicsSecond(attractor, stiffness,
-                    dissipation, embedding).to(device)
-
-# Create trainer
-trainer = Trainer(ds, X, Y)
+# Dynamics & Trainer
+if first:
+    ds = DynamicsFirst(attractor, stiffness, embedding).to(device)
+    trainer = Trainer(ds, X[:, :dim], X[:, dim:])
+else:
+    ds = DynamicsSecond(attractor, stiffness,
+                        dissipation, embedding).to(device)
+    trainer = Trainer(ds, X, Y)
 
 # Set trainer optimizer (this is not very clean)
 trainer.optimizer = torch.optim.Adam(
-    trainer.model.parameters(), lr=1e-2,  weight_decay=1e-8)
+    trainer.model.parameters(), lr=1e-2,  weight_decay=1e-3)
 
 # Set trainer loss
-trainer.loss = torch.nn.MSELoss()  # torch.nn.SmoothL1Loss()
+trainer.loss = torch.nn.MSELoss()
+# trainer.loss = torch.nn.SmoothL1Loss()
 
 # Set trainer options
 trainer.options(normalize=False, shuffle=True, print_loss=True,

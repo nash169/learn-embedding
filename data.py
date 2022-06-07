@@ -4,24 +4,27 @@ import os
 import scipy.io as sio
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
 
 from src.utils import linear_map
 
-dim = 2
-dataset = "CShape"
+dataset = sys.argv[1] if len(sys.argv) > 1 else "Angle"
+num_trajs = int(sys.argv[2]) if len(sys.argv) > 2 else 1
+
 data = sio.loadmat(os.path.join('data', '{}.mat'.format(dataset)))
 data = data['demos']
-num_trajs = 1  # data.shape[1]
-trajs = []
+
+dim = 2
 lower, upper = -0.5, 0.5
 rescale, vel, acc = True, True, True
 
-pos = x = data[0, 0]['pos'][0, 0].T
+pos = data[0, 0]['pos'][0, 0].T
 for i in range(1, num_trajs):
     pos = np.append(pos, data[0, i]['pos'][0, 0].T, axis=0)
 x_min, x_max = np.min(pos[:, 0]), np.max(pos[:, 0])
 y_min, y_max = np.min(pos[:, 1]), np.max(pos[:, 1])
 
+trajs = []
 for i in range(num_trajs):
     # time
     t = data[0, i]['t'][0, 0].T

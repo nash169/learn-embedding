@@ -19,12 +19,10 @@ class Spherical(nn.Module):
     def __init__(self, in_features):
         super(Spherical, self).__init__()
 
-        self.matrix = torch.eye(in_features, in_features)
-
-        self.weights = nn.Parameter(torch.rand(1))
+        self.spherical = nn.Parameter(torch.rand(1))
 
     def forward(self, x):
-        return nn.functional.linear(x, self.weights*self.matrix)
+        return nn.functional.linear(x, self.spherical*torch.eye(x.shape[1]).to(x.device))
 
 
 class Diagonal(nn.Module):
@@ -32,13 +30,14 @@ class Diagonal(nn.Module):
 
         super(Diagonal, self).__init__()
 
-        self.spd = nn.Linear(in_features, in_features, bias=False)
+        self.diagonal = nn.Linear(in_features, in_features, bias=False)
 
     def forward(self, x):
-        self.spd.weight.data *= torch.eye(x.shape[1], dtype=bool).to(x.device)
-        self.spd.weight.data = torch.abs(self.spd.weight.data)
+        self.diagonal.weight.data *= torch.eye(
+            x.shape[1], dtype=bool).to(x.device)
+        self.diagonal.weight.data = torch.abs(self.diagonal.weight.data)
 
-        return self.spd(x)
+        return self.diagonal(x)
 
 
 class SPD(nn.Module):

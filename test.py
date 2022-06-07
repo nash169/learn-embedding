@@ -4,19 +4,23 @@ import os
 import sys
 import numpy as np
 import torch
+import torch.nn as nn
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
-from src.kernel import Kernel
+from src.kernel_machine import KernelMachine
+from src.coupling_layer import CouplingLayer
 from src.feedforward import FeedForward
 from src.embedding import Embedding
-from src.parametrization import SPD, Diagonal
+from src.parametrization import SPD, Diagonal, Spherical
 from src.dynamics_second import DynamicsSecond
+from src.dynamics_first import DynamicsFirst
 
 # User input
 dataset = sys.argv[1] if len(sys.argv) > 1 else "Angle"
 obstacle = sys.argv[2].lower() in ['true', '1', 't', 'y', 'yes',
                                    'load'] if len(sys.argv) > 2 else False
+first = False
 
 # CPU/GPU setting
 use_cuda = torch.cuda.is_available()
@@ -51,24 +55,32 @@ X_test = torch.from_numpy(
     X_test).float().to(device).requires_grad_(True)
 
 # Function approximator
-kernel = Kernel(dim, 1000, 1, length=0.45)
-# feedforward = FeedForward(dim, [100, 100], 1)
+approximator = KernelMachine(dim, 1000, 1, length=0.45)
+# approximator = FeedForward(dim, [100, 100], 1)
+# layers = nn.ModuleList()
+# layers.append(KernelMachine(dim, 250, dim+1, length=0.45))
+# for i in range(2):
+#     layers.append(CouplingLayer(dim+1, 250, i % 2, 0.45))
+# approximator = nn.Sequential(*(layers[i] for i in range(len(layers))))
 
 # Embedding
-embedding = Embedding(kernel)
+embedding = Embedding(approximator)
 
 # Attractor
 attractor = X[-1, :dim]
 
 # Stiffness
-stiffness = Diagonal(dim)
+stiffness = Spherical(dim)
 
 # Dissipation
-dissipation = Diagonal(dim)
+dissipation = Spherical(dim)
 
 # Dynamics
-ds = DynamicsSecond(attractor, stiffness,
-                    dissipation, embedding).to(device)
+if first:
+    ds = DynamicsFirst(attractor, stiffness, embedding).to(device)
+else:
+    ds = DynamicsSecond(attractor, stiffness,
+                        dissipation, embedding).to(device)
 
 # Load dict
 ds.load_state_dict(torch.load(os.path.join(
@@ -115,33 +127,37 @@ z_embedding = test_embedding[:, 2].reshape(resolution, -1, order="F")
 train_embedding = ds.embedding(X[:, :dim]).cpu().detach().numpy()
 
 # Sampled Dynamics
-box_side = 0.05
-a = [x_train[0, 0] - box_side, x_train[0, 1] - box_side]
-b = [x_train[0, 0] + box_side, x_train[0, 1] + box_side]
+if not first:
+    box_side = 0.05
+    a = [x_train[0, 0] - box_side, x_train[0, 1] - box_side]
+    b = [x_train[0, 0] + box_side, x_train[0, 1] + box_side]
 
-T = 1
-dt = 0.01
-steps = int(np.ceil(T/dt))
-num_samples = 3
-samples = []
+    T = 1
+    dt = 0.01
+    steps = int(np.ceil(T/dt))
+    num_samples = 3
+    samples = []
 
-for i in range(num_samples):
-    state = np.zeros([steps, 2*dim])
-    state[0, 0] = np.random.uniform(a[0], b[0])
-    state[0, 1] = np.random.uniform(a[1], b[1])
-    samples.append(state)
-
-for step in range(steps-1):
     for i in range(num_samples):
-        X_sample = torch.from_numpy(samples[i][step, :]).float().to(
-            device).requires_grad_(True).unsqueeze(0)
-        samples[i][step+1, dim:] = samples[i][step, dim:] + \
-            dt*ds(X_sample).cpu().detach().numpy()
-        samples[i][step+1, :dim] = samples[i][step, :dim] + \
-            dt*samples[i][step+1, dim:]
+        state = np.zeros([steps, 2*dim])
+        state[0, 0] = np.random.uniform(a[0], b[0])
+        state[0, 1] = np.random.uniform(a[1], b[1])
+        samples.append(state)
+
+    for step in range(steps-1):
+        for i in range(num_samples):
+            X_sample = torch.from_numpy(samples[i][step, :]).float().to(
+                device).requires_grad_(True).unsqueeze(0)
+            samples[i][step+1, dim:] = samples[i][step, dim:] + \
+                dt*ds(X_sample).cpu().detach().numpy()
+            samples[i][step+1, :dim] = samples[i][step, :dim] + \
+                dt*samples[i][step+1, dim:]
 
 # Vector Field
-field = X_test[:, dim:] + dt * ds(X_test)
+if first:
+    field = ds(X_test[:, :dim])
+else:
+    field = X_test[:, dim:] + dt * ds(X_test)
 field = field.cpu().detach().numpy()
 x_field = field[:, 0].reshape(resolution, -1, order="F")
 y_field = field[:, 1].reshape(resolution, -1, order="F")
@@ -180,15 +196,19 @@ ax = fig.add_subplot(111)
 ax.streamplot(x_mesh, y_mesh, x_field, y_field, color=phi, cmap="jet")
 ax.axis('square')
 fig.colorbar(mappable,  ax=ax, label=r"$\phi$")
-for i in range(num_samples):
-    ax.plot(samples[i][:, 0], samples[i][:, 1], color='k')
+
+if not first:
+    for i in range(num_samples):
+        ax.plot(samples[i][:, 0], samples[i][:, 1], color='k')
+    rect = patches.Rectangle((x_train[0, 0] - box_side, x_train[0, 1] - box_side),
+                             2*box_side, 2*box_side, linewidth=1, edgecolor='k', facecolor='none')
+    ax.add_patch(rect)
+
 ax.scatter(x_train[::10, 0], x_train[::10, 1],
            s=20, edgecolors='k', c='red')
 ax.scatter(x_train[-1, 0], x_train[-1, 1], s=100,
            edgecolors='k', c='yellow', marker="*")
-rect = patches.Rectangle((x_train[0, 0] - box_side, x_train[0, 1] - box_side),
-                         2*box_side, 2*box_side, linewidth=1, edgecolor='k', facecolor='none')
-ax.add_patch(rect)
+
 if obstacle:
     x_obs = x_obs.cpu().detach().numpy()
     circ = plt.Circle((x_obs[0, 0], x_obs[0, 1]), r,
