@@ -22,7 +22,7 @@ class Spherical(nn.Module):
         self.spherical = nn.Parameter(torch.rand(1))
 
     def forward(self, x):
-        return nn.functional.linear(x, self.spherical*torch.eye(x.shape[1]).to(x.device))
+        return nn.functional.linear(x, self.spherical.abs()*torch.eye(x.shape[1]).to(x.device))
 
 
 class Diagonal(nn.Module):
