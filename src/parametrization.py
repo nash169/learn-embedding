@@ -16,28 +16,47 @@ class MatrixExponential(nn.Module):
 
 
 class Spherical(nn.Module):
-    def __init__(self, in_features):
+    def __init__(self):
         super(Spherical, self).__init__()
 
-        self.spherical = nn.Parameter(torch.rand(1))
+        self.spherical_ = nn.Parameter(torch.rand(1))
 
     def forward(self, x):
-        return nn.functional.linear(x, self.spherical.abs()*torch.eye(x.shape[1]).to(x.device))
+        return nn.functional.linear(x, self.spherical_.abs()*torch.eye(x.shape[1]).to(x.device))
+
+    # Params
+    @property
+    def spherical(self):
+        return self.spherical_
+
+    @spherical.setter
+    def spherical(self, value):
+        self.spherical_ = nn.Parameter(value[0], requires_grad=value[1])
 
 
 class Diagonal(nn.Module):
     def __init__(self, in_features):
-
         super(Diagonal, self).__init__()
 
-        self.diagonal = nn.Linear(in_features, in_features, bias=False)
+        self.diagonal_ = nn.Parameter(torch.rand(in_features))
+        # self.diagonal = nn.Linear(in_features, in_features, bias=False)
 
     def forward(self, x):
-        self.diagonal.weight.data *= torch.eye(
-            x.shape[1], dtype=bool).to(x.device)
-        self.diagonal.weight.data = torch.abs(self.diagonal.weight.data)
+        return nn.functional.linear(x, torch.diag(self.diagonal_.abs()).to(x.device))
+        # self.diagonal.weight.data *= torch.eye(
+        #     x.shape[1], dtype=bool).to(x.device)
+        # self.diagonal.weight.data = torch.abs(self.diagonal.weight.data)
 
-        return self.diagonal(x)
+        # return self.diagonal(x)
+
+    # Params
+    @property
+    def diagonal(self):
+        return self.diagonal_
+
+    @diagonal.setter
+    def diagonal(self, value):
+        self.diagonal_ = nn.Parameter(value[0], requires_grad=value[1])
 
 
 class SPD(nn.Module):

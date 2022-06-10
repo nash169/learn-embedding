@@ -20,7 +20,7 @@ from src.trainer import Trainer
 dataset = sys.argv[1] if len(sys.argv) > 1 else "Angle"
 load = sys.argv[2].lower() in ['true', '1', 't', 'y', 'yes',
                                'load'] if len(sys.argv) > 2 else False
-first = False
+first = True
 
 # CPU/GPU setting
 use_cuda = torch.cuda.is_available()
@@ -37,8 +37,8 @@ X = torch.from_numpy(data[:, :2*dim]).float().to(device)
 Y = torch.from_numpy(data[:, 2*dim:]).float().to(device)
 
 # Function approximator
-approximator = KernelMachine(dim, 1000, 1, length=0.1)
-# approximator = FeedForward(dim, [10, 10], 1)
+approximator = KernelMachine(dim, 1000, 1, length=0.3)
+# approximator = FeedForward(dim, [128, 128, 128], 1, 3)
 # layers = nn.ModuleList()
 # layers.append(KernelMachine(dim, 250, dim+1, length=0.45))
 # for i in range(2):
@@ -60,10 +60,12 @@ embedding.metric = metric
 attractor = X[-1, :dim]
 
 # Stiffness
-stiffness = Spherical(dim)
+stiffness = Diagonal(dim)
+# stiffness.spherical = (torch.tensor(1.), False)
 
 # Dissipation
-dissipation = Spherical(dim)
+dissipation = Diagonal(dim)
+# dissipation.spherical = (torch.tensor(2.), False)
 
 # Dynamics & Trainer
 if first:
@@ -76,7 +78,7 @@ else:
 
 # Set trainer optimizer (this is not very clean)
 trainer.optimizer = torch.optim.Adam(
-    trainer.model.parameters(), lr=1e-3,  weight_decay=1e-6)
+    trainer.model.parameters(), lr=1e-3, weight_decay=1e-8)
 
 # Set trainer loss
 trainer.loss = torch.nn.MSELoss()
@@ -84,7 +86,7 @@ trainer.loss = torch.nn.MSELoss()
 
 # Set trainer options
 trainer.options(normalize=False, shuffle=True, print_loss=True,
-                epochs=10000, load_model=(dataset if load else None))
+                epochs=1000, load_model=(dataset if load else None))
 
 # Train model
 trainer.train()

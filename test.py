@@ -20,7 +20,7 @@ from src.dynamics_first import DynamicsFirst
 dataset = sys.argv[1] if len(sys.argv) > 1 else "Angle"
 obstacle = sys.argv[2].lower() in ['true', '1', 't', 'y', 'yes',
                                    'load'] if len(sys.argv) > 2 else False
-first = False
+first = True
 
 # CPU/GPU setting
 use_cuda = torch.cuda.is_available()
@@ -41,7 +41,7 @@ ddx_train = data[:, 2*dim:]
 
 # Test data
 resolution = 100
-lower, upper = -0.5, 0.5
+lower, upper = -1, 1
 x_mesh, y_mesh = np.meshgrid(np.linspace(lower, upper, resolution),
                              np.linspace(lower, upper, resolution))
 x_test = np.array(
@@ -56,7 +56,7 @@ X_test = torch.from_numpy(
 
 # Function approximator
 approximator = KernelMachine(dim, 1000, 1, length=0.4)
-# approximator = FeedForward(dim, [10, 10], 1)
+# approximator = FeedForward(dim, [128, 128, 128], 1, 3)
 # layers = nn.ModuleList()
 # layers.append(KernelMachine(dim, 250, dim+1, length=0.45))
 # for i in range(2):
@@ -70,10 +70,10 @@ embedding = Embedding(approximator)
 attractor = X[-1, :dim]
 
 # Stiffness
-stiffness = Spherical(dim)
+stiffness = Diagonal(dim)
 
 # Dissipation
-dissipation = Spherical(dim)
+dissipation = Diagonal(dim)
 
 # Dynamics
 if first:
@@ -88,7 +88,7 @@ ds.load_state_dict(torch.load(os.path.join(
 ds.eval()
 
 # Obstacle
-a_obs, b_obs, eta = 1, 3, 100
+a_obs, b_obs, eta = 1, 4, 1000
 r = 0.1
 x_obs = torch.tensor([[-0.3000,   0.0000]]).to(device)
 y_obs = ds.embedding(x_obs)
@@ -98,10 +98,16 @@ if obstacle:
     #                           r**2).unsqueeze(1).unsqueeze(2)
     #     return torch.eye(y.shape[1]).repeat(y.shape[0], 1, 1).to(device)*n
 
+    # def metric(y):
+    #     d = (torch.norm(y-y_obs, dim=1) + r+0.05).unsqueeze(1).unsqueeze(2) + 1
+    #     dd = 0.5*(y-y_obs)/torch.norm(y-y_obs, dim=1).unsqueeze(1)
+    #     return torch.bmm(dd.unsqueeze(2), dd.unsqueeze(1)) * torch.exp(a_obs/(b_obs*torch.pow(d, b_obs))) + 0.01*torch.eye(y.shape[1]).repeat(y.shape[0], 1, 1).to(y.device)
+
     def metric(y):
-        d = (torch.norm(y-y_obs, dim=1) + r+0.05).unsqueeze(1).unsqueeze(2) + 1
-        dd = 0.5*(y-y_obs)/torch.norm(y-y_obs, dim=1).unsqueeze(1)
-        return torch.bmm(dd.unsqueeze(2), dd.unsqueeze(1)) * torch.exp(a_obs/(b_obs*torch.pow(d, b_obs))) + 0.01*torch.eye(y.shape[1]).repeat(y.shape[0], 1, 1).to(y.device)
+        d = y-y_obs
+        k = eta*torch.exp(-0.5*torch.norm(d, dim=1)/r **
+                          2).unsqueeze(1).unsqueeze(2)
+        return torch.bmm(d.unsqueeze(2), d.unsqueeze(1)) * k + torch.eye(y.shape[1]).repeat(y.shape[0], 1, 1).to(y.device)
 else:
     def metric(y):
         g = torch.eye(y.shape[1])
