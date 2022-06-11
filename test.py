@@ -55,7 +55,7 @@ X_test = torch.from_numpy(
     X_test).float().to(device).requires_grad_(True)
 
 # Function approximator
-approximator = KernelMachine(dim, 1000, 1, length=0.4)
+approximator = KernelMachine(dim, 1000, 1, length=0.2)
 # approximator = FeedForward(dim, [128, 128, 128], 1, 3)
 # layers = nn.ModuleList()
 # layers.append(KernelMachine(dim, 250, dim+1, length=0.45))
@@ -133,29 +133,37 @@ z_embedding = test_embedding[:, 2].reshape(resolution, -1, order="F")
 train_embedding = ds.embedding(X[:, :dim]).cpu().detach().numpy()
 
 # Sampled Dynamics
+box_side = 0.05
+a = [x_train[0, 0] - box_side, x_train[0, 1] - box_side]
+b = [x_train[0, 0] + box_side, x_train[0, 1] + box_side]
+
+T = 5
+dt = 0.01
+steps = int(np.ceil(T/dt))
+num_samples = 3
+samples = []
+
+for i in range(num_samples):
+    state = np.zeros([steps, 2*dim])
+    state[0, 0] = np.random.uniform(a[0], b[0])
+    state[0, 1] = np.random.uniform(a[1], b[1])
+    samples.append(state)
+
 if not first:
-    box_side = 0.05
-    a = [x_train[0, 0] - box_side, x_train[0, 1] - box_side]
-    b = [x_train[0, 0] + box_side, x_train[0, 1] + box_side]
-
-    T = 5
-    dt = 0.01
-    steps = int(np.ceil(T/dt))
-    num_samples = 3
-    samples = []
-
-    for i in range(num_samples):
-        state = np.zeros([steps, 2*dim])
-        state[0, 0] = np.random.uniform(a[0], b[0])
-        state[0, 1] = np.random.uniform(a[1], b[1])
-        samples.append(state)
-
     for step in range(steps-1):
         for i in range(num_samples):
             X_sample = torch.from_numpy(samples[i][step, :]).float().to(
                 device).requires_grad_(True).unsqueeze(0)
             samples[i][step+1, dim:] = samples[i][step, dim:] + \
                 dt*ds(X_sample).cpu().detach().numpy()
+            samples[i][step+1, :dim] = samples[i][step, :dim] + \
+                dt*samples[i][step+1, dim:]
+else:
+    for step in range(steps-1):
+        for i in range(num_samples):
+            X_sample = torch.from_numpy(samples[i][step, :dim]).float().to(
+                device).requires_grad_(True).unsqueeze(0)
+            samples[i][step+1, dim:] = ds(X_sample).cpu().detach().numpy()
             samples[i][step+1, :dim] = samples[i][step, :dim] + \
                 dt*samples[i][step+1, dim:]
 
@@ -210,12 +218,11 @@ ax.streamplot(x_mesh, y_mesh, x_field, y_field, color=phi, cmap="jet")
 ax.axis('square')
 fig.colorbar(mappable,  ax=ax, label=r"$\phi$")
 
-if not first:
-    for i in range(num_samples):
-        ax.plot(samples[i][:, 0], samples[i][:, 1], color='k')
-    rect = patches.Rectangle((x_train[0, 0] - box_side, x_train[0, 1] - box_side),
-                             2*box_side, 2*box_side, linewidth=1, edgecolor='k', facecolor='none')
-    ax.add_patch(rect)
+for i in range(num_samples):
+    ax.plot(samples[i][:, 0], samples[i][:, 1], color='k')
+rect = patches.Rectangle((x_train[0, 0] - box_side, x_train[0, 1] - box_side),
+                         2*box_side, 2*box_side, linewidth=1, edgecolor='k', facecolor='none')
+ax.add_patch(rect)
 
 ax.scatter(x_train[::10, 0], x_train[::10, 1],
            s=20, edgecolors='k', c='red')

@@ -10,7 +10,7 @@ from src.utils import linear_map
 
 dataset = sys.argv[1] if len(sys.argv) > 1 else "Angle"
 num_trajs = int(sys.argv[2]) if len(sys.argv) > 2 else 1
-init_cut = 0
+init_cut = 50
 
 data = sio.loadmat(os.path.join('data', '{}.mat'.format(dataset)))
 data = data['demos']
