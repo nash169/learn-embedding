@@ -63,3 +63,12 @@ class Embedding(nn.Module):
     @metric.setter
     def metric(self, value):
         self.metric_ = value
+
+    # Obstacles
+    @property
+    def obstacles(self):
+        return self.obstacles_
+
+    @obstacles.setter
+    def obstacles(self, value):
+        self.obstacles_ = value
