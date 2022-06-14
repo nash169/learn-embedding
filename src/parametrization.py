@@ -22,6 +22,8 @@ class Spherical(nn.Module):
         self.spherical_ = nn.Parameter(torch.rand(1))
 
     def forward(self, x):
+        # self.spherical_.clamp_min(0)
+        # self.spherical_.data.clamp_min(0)
         return nn.functional.linear(x, self.spherical_.abs()*torch.eye(x.shape[1]).to(x.device))
 
     # Params
@@ -70,3 +72,18 @@ class SPD(nn.Module):
 
     def forward(self, x):
         return self.spd(x)
+
+
+# class SPD(nn.Module):
+#     def __init__(self, in_features):
+
+#         super(SPD, self).__init__()
+
+#         self.eig_ = nn.Parameter(torch.rand(in_features))
+#         self.vec_ = nn.Parameter(torch.rand(in_features))
+
+#     def forward(self, x):
+#         D = torch.diag(self.eig_)
+#         U = -torch.linalg.qr(torch.cat((self.vec_.unsqueeze(1),
+#                              torch.rand(self.vec_.shape[0], self.vec_.shape[0]-1)), dim=1))
+#         return nn.functional.linear(x, torch.mm(U, torch.mm(D, U.transpose())).to(x.device))

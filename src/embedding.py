@@ -3,6 +3,14 @@
 import torch
 import torch.nn as nn
 
+from src.utils import squared_exp
+
+
+# Default ambient metric
+def identity(y):
+    g = torch.eye(y.shape[1])
+    return g.repeat(y.shape[0], 1, 1).to(y.device)
+
 
 class Embedding(nn.Module):
     def __init__(self, approximator):
@@ -10,8 +18,20 @@ class Embedding(nn.Module):
 
         self.net_ = approximator
 
+        # Default ambient metric
+        self.metric = identity
+
     def forward(self, x):
-        return torch.concat((x, self.net_(x)), axis=1)
+        y = self.net_(x)
+
+        if hasattr(self, 'obstacles'):
+            y += squared_exp(x, self.obstacles, sigma=0.05,
+                             eta=10).to(x.device)
+
+        y[y == torch.inf] = 100
+
+        return torch.concat((x, y), axis=1)
+        # return torch.concat((x, self.net_(x)), axis=1)
         # return self.net_(x)
 
     def jacobian(self, x, y):
@@ -56,19 +76,19 @@ class Embedding(nn.Module):
             nn.init.constant_(m.bias, 0.1)
 
     # Ambient space metric
-    @property
+    @ property
     def metric(self):
         return self.metric_
 
-    @metric.setter
+    @ metric.setter
     def metric(self, value):
         self.metric_ = value
 
     # Obstacles
-    @property
+    @ property
     def obstacles(self):
         return self.obstacles_
 
-    @obstacles.setter
+    @ obstacles.setter
     def obstacles(self, value):
         self.obstacles_ = value

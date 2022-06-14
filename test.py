@@ -82,43 +82,47 @@ else:
     ds = DynamicsSecond(attractor, stiffness,
                         dissipation, embedding).to(device)
 
-# Obstacle
-a_obs, b_obs, eta = 1, 4, 10000
-r = 0.05
-x_obs = torch.tensor([[-0.3000,   0.0000]]).to(device)
-y_obs = ds.embedding(x_obs)
-if obstacle:
-    # def metric(y):
-    #     n = 1 + eta*torch.exp(-0.5*torch.norm(y-y_obs, dim=1) /
-    #                           r**2).unsqueeze(1).unsqueeze(2)
-    #     return torch.eye(y.shape[1]).repeat(y.shape[0], 1, 1).to(device)*n
-
-    # def metric(y):
-    #     d = y-y_obs
-    #     k = (torch.norm(d, dim=1) - r).unsqueeze(1).unsqueeze(2)
-    #     k = torch.exp(a_obs/(b_obs*torch.pow(k, b_obs)))
-    #     return torch.bmm(d.unsqueeze(2), d.unsqueeze(1)) * (k-1) + torch.eye(y.shape[1]).repeat(y.shape[0], 1, 1).to(y.device)
-
-    # def metric(y):
-    #     d = (torch.norm(y-y_obs, dim=1) + r+0.05).unsqueeze(1).unsqueeze(2) + 1
-    #     dd = 0.5*(y-y_obs)/torch.norm(y-y_obs, dim=1).unsqueeze(1)
-    #     return torch.bmm(dd.unsqueeze(2), dd.unsqueeze(1)) * torch.exp(a_obs/(b_obs*torch.pow(d, b_obs))) + 0.01*torch.eye(y.shape[1]).repeat(y.shape[0], 1, 1).to(y.device)
-
-    def metric(y):
-        d = y-y_obs
-        k = eta*torch.exp(-0.5*torch.sum(d.pow(2), dim=1) /
-                          r ** 2).unsqueeze(1).unsqueeze(2)
-        return torch.bmm(d.unsqueeze(2), d.unsqueeze(1)) * k.pow(2)/np.power(r, 4) + torch.eye(y.shape[1]).repeat(y.shape[0], 1, 1).to(y.device)
-else:
-    def metric(y):
-        g = torch.eye(y.shape[1])
-        return g.repeat(y.shape[0], 1, 1).to(device)
-ds.embedding.metric = metric
-
 # Load dict
 ds.load_state_dict(torch.load(os.path.join(
     'models', '{}.pt'.format(dataset)), map_location=torch.device(device)))
 ds.eval()
+
+# Obstacle
+a_obs, b_obs, eta = 1, 2, 10
+r = 0.05
+# x_obs = torch.tensor([[-0.3000,   0.0000]]).to(device)
+x_obs = torch.tensor([[0.0000,   -0.1000]]).to(device)
+y_obs = ds.embedding(x_obs)
+# if obstacle:
+#     # def metric(y):
+#     #     n = 1 + eta*torch.exp(-0.5*torch.norm(y-y_obs, dim=1) /
+#     #                           r**2).unsqueeze(1).unsqueeze(2)
+#     #     return torch.eye(y.shape[1]).repeat(y.shape[0], 1, 1).to(device)*n
+
+#     # def metric(y):
+#     #     d = y-y_obs
+#     #     k = (torch.norm(d, dim=1) - r).unsqueeze(1).unsqueeze(2)
+#     #     k = torch.exp(a_obs/(b_obs*torch.pow(k, b_obs)))
+#     #     return torch.bmm(d.unsqueeze(2), d.unsqueeze(1)) * (k-1) + torch.eye(y.shape[1]).repeat(y.shape[0], 1, 1).to(y.device)
+
+#     # def metric(y):
+#     #     d = (torch.norm(y-y_obs, dim=1) + r+0.05).unsqueeze(1).unsqueeze(2) + 1
+#     #     dd = 0.5*(y-y_obs)/torch.norm(y-y_obs, dim=1).unsqueeze(1)
+#     #     return torch.bmm(dd.unsqueeze(2), dd.unsqueeze(1)) * torch.exp(a_obs/(b_obs*torch.pow(d, b_obs))) + 0.01*torch.eye(y.shape[1]).repeat(y.shape[0], 1, 1).to(y.device)
+
+#     def metric(y):
+#         d = y-y_obs
+#         sigma = r + 0.1
+#         k = eta*torch.exp(-0.5*torch.sum(d.pow(2), dim=1) /
+#                           sigma ** 2).unsqueeze(1).unsqueeze(2)
+#         return torch.bmm(d.unsqueeze(2), d.unsqueeze(1)) * k.pow(2)/np.power(sigma, 4) + torch.eye(y.shape[1]).repeat(y.shape[0], 1, 1).to(y.device)
+# else:
+#     def metric(y):
+#         g = torch.eye(y.shape[1])
+#         return g.repeat(y.shape[0], 1, 1).to(device)
+# ds.embedding.metric = metric
+
+ds.embedding.obstacles = torch.tensor([[0.0000,   -0.1000]]).to(device)
 
 # Potential
 phi = ds.potential(x_test)
@@ -139,7 +143,7 @@ z_embedding = test_embedding[:, 2].reshape(resolution, -1, order="F")
 train_embedding = ds.embedding(X[:, :dim]).cpu().detach().numpy()
 
 # Sampled Dynamics
-box_side = 0.05
+box_side = 0.03
 a = [x_train[0, 0] - box_side, x_train[0, 1] - box_side]
 b = [x_train[0, 0] + box_side, x_train[0, 1] + box_side]
 
@@ -212,7 +216,7 @@ if obstacle:
     u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
     obs_x = y_obs[0, 0] + r*np.cos(u)*np.sin(v)
     obs_y = y_obs[0, 1] + r*np.sin(u)*np.sin(v)
-    obs_z = y_obs[0, 2] + 4.5*np.cos(v)
+    obs_z = y_obs[0, 2] + 1.2*np.cos(v)
     ax.plot_surface(obs_x, obs_y, obs_z, linewidth=0.0,
                     cstride=1, rstride=1)
 
