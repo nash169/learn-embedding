@@ -4,6 +4,11 @@ import torch
 import torch.nn as nn
 
 
+# Default desired velocity
+def zero_velocity(x):
+    return 0
+
+
 class DynamicsSecond(nn.Module):
     def __init__(self, attractor, stiffness, dissipation, embedding):
         super(DynamicsSecond, self).__init__()
@@ -15,6 +20,8 @@ class DynamicsSecond(nn.Module):
         self.dissipation = dissipation
 
         self.embedding = embedding
+
+        self.velocity_ = zero_velocity
 
     # Forward network pass
     def forward(self, X):
@@ -34,7 +41,11 @@ class DynamicsSecond(nn.Module):
         # christoffel
         g = self.embedding.christoffel(x, m)
 
-        return (torch.bmm(m.inverse(), -(self.dissipation(v)+self.stiffness(x-self.attractor)).unsqueeze(2)) - torch.bmm(torch.einsum('bqij,bi->bqj', g, v), v.unsqueeze(2))).squeeze()
+        # desired state
+        xd = x - self.attractor
+        vd = v - self.velocity(x)
+
+        return (torch.bmm(m.inverse(), -(self.dissipation(vd)+self.stiffness(xd)).unsqueeze(2)) - torch.bmm(torch.einsum('bqij,bi->bqj', g, vd), vd.unsqueeze(2))).squeeze()
 
     # Potential function
     def potential(self, x):
@@ -77,3 +88,12 @@ class DynamicsSecond(nn.Module):
     @embedding.setter
     def embedding(self, value):
         self.embedding_ = value
+
+    # Desired velocity setter/getter
+    @property
+    def velocity(self):
+        return self.velocity_
+
+    @velocity.setter
+    def velocity(self, value):
+        self.velocity_ = value

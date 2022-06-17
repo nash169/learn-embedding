@@ -61,29 +61,51 @@ class Diagonal(nn.Module):
         self.diagonal_ = nn.Parameter(value[0], requires_grad=value[1])
 
 
-class SPD(nn.Module):
-    def __init__(self, in_features):
-
-        super(SPD, self).__init__()
-
-        self.spd = nn.Linear(in_features, in_features, bias=False)
-        P.register_parametrization(self.spd, "weight", Symmetric())
-        P.register_parametrization(self.spd, "weight", MatrixExponential())
-
-    def forward(self, x):
-        return self.spd(x)
-
-
 # class SPD(nn.Module):
 #     def __init__(self, in_features):
 
 #         super(SPD, self).__init__()
 
-#         self.eig_ = nn.Parameter(torch.rand(in_features))
-#         self.vec_ = nn.Parameter(torch.rand(in_features))
+#         self.spd = nn.Linear(in_features, in_features, bias=False)
+#         P.register_parametrization(self.spd, "weight", Symmetric())
+#         P.register_parametrization(self.spd, "weight", MatrixExponential())
 
 #     def forward(self, x):
-#         D = torch.diag(self.eig_)
-#         U = -torch.linalg.qr(torch.cat((self.vec_.unsqueeze(1),
-#                              torch.rand(self.vec_.shape[0], self.vec_.shape[0]-1)), dim=1))
-#         return nn.functional.linear(x, torch.mm(U, torch.mm(D, U.transpose())).to(x.device))
+#         return self.spd(x)
+
+
+class Fixed(nn.Module):
+    def __init__(self, in_features):
+
+        super(Fixed, self).__init__()
+
+        self.fixed_ = nn.Linear(in_features, in_features, bias=False)
+        self.fixed_.weight = nn.Parameter(
+            torch.eye(in_features, in_features), requires_grad=False)
+
+    def forward(self, x):
+        return self.fixed_(x)
+
+     # Params
+    @property
+    def fixed(self):
+        return self.fixed_
+
+    @fixed.setter
+    def fixed(self, value):
+        self.fixed_.weight = nn.Parameter(value, requires_grad=False)
+
+
+class SPD(nn.Module):
+    def __init__(self, in_features):
+
+        super(SPD, self).__init__()
+
+        self.eig_ = nn.Parameter(torch.rand(in_features))
+        self.vec_ = nn.Parameter(torch.rand(in_features))
+
+    def forward(self, x):
+        D = torch.diag(self.eig_).square()
+        U, _ = torch.linalg.qr(torch.cat((self.vec_.unsqueeze(1),
+                                          torch.rand(self.vec_.shape[0], self.vec_.shape[0]-1).to(x.device)), dim=1))
+        return nn.functional.linear(x, torch.mm(U.transpose(1, 0), torch.mm(D, U)).to(x.device))

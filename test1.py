@@ -3,6 +3,7 @@
 import os
 import sys
 import numpy as np
+from sympy import false
 import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
@@ -12,7 +13,7 @@ from src.kernel_machine import KernelMachine
 from src.coupling_layer import CouplingLayer
 from src.feedforward import FeedForward
 from src.embedding import Embedding
-from src.parametrization import SPD, Diagonal, Spherical
+from src.parametrization import SPD, Diagonal, Fixed, Spherical
 from src.dynamics_second import DynamicsSecond
 from src.dynamics_first import DynamicsFirst
 
@@ -20,14 +21,13 @@ from src.dynamics_first import DynamicsFirst
 dataset = sys.argv[1] if len(sys.argv) > 1 else "Angle"
 obstacle = sys.argv[2].lower() in ['true', '1', 't', 'y', 'yes',
                                    'load'] if len(sys.argv) > 2 else False
-first = True
 
 # CPU/GPU setting
 use_cuda = torch.cuda.is_available()
 device = torch.device("cuda" if use_cuda else "cpu")
 
 # Data
-data = np.loadtxt(os.path.join('data', '{}.csv'.format(dataset)))
+data = np.loadtxt(os.path.join('trainset', '{}.csv'.format(dataset)))
 dim = int(data.shape[1]/3)
 
 # Tensor data
@@ -41,7 +41,7 @@ ddx_train = data[:, 2*dim:]
 
 # Test data
 resolution = 100
-lower, upper = -0.5, 0.5
+lower, upper = -1, 1
 x_mesh, y_mesh = np.meshgrid(np.linspace(lower, upper, resolution),
                              np.linspace(lower, upper, resolution))
 x_test = np.array(
@@ -55,8 +55,8 @@ X_test = torch.from_numpy(
     X_test).float().to(device).requires_grad_(True)
 
 # Function approximator
-# approximator = KernelMachine(dim, 1000, 1, length=0.2)
-approximator = FeedForward(dim, [128, 128, 128], 1)
+# approximator = KernelMachine(dim, 1000, 1, length=0.3)
+approximator = FeedForward(dim, [64, 64, 64], 1)
 # layers = nn.ModuleList()
 # layers.append(KernelMachine(dim, 250, dim+1, length=0.45))
 # for i in range(2):
@@ -65,6 +65,7 @@ approximator = FeedForward(dim, [128, 128, 128], 1)
 
 # Embedding
 embedding = Embedding(approximator)
+embedding.apply(embedding.init_weights)
 
 # Attractor
 attractor = X[-1, :dim]
@@ -72,57 +73,40 @@ attractor = X[-1, :dim]
 # Stiffness
 stiffness = SPD(dim)
 
-# Dissipation
-dissipation = SPD(dim)
-
 # Dynamics
-if first:
-    ds = DynamicsFirst(attractor, stiffness, embedding).to(device)
-else:
-    ds = DynamicsSecond(attractor, stiffness,
-                        dissipation, embedding).to(device)
-
-# Load dict
+ds = DynamicsFirst(attractor, stiffness, embedding).to(device)
 ds.load_state_dict(torch.load(os.path.join(
-    'models', '{}.pt'.format(dataset)), map_location=torch.device(device)))
+    'models', '{}.pt'.format(dataset+"1")), map_location=torch.device(device)))
 ds.eval()
 
 # Obstacle
-a_obs, b_obs, eta = 1, 2, 10
+a_obs, b_obs, eta = 1, 2, 1
 r = 0.05
 # x_obs = torch.tensor([[-0.3000,   0.0000]]).to(device)
 x_obs = torch.tensor([[0.0000,   -0.1000]]).to(device)
 y_obs = ds.embedding(x_obs)
-# if obstacle:
-#     # def metric(y):
-#     #     n = 1 + eta*torch.exp(-0.5*torch.norm(y-y_obs, dim=1) /
-#     #                           r**2).unsqueeze(1).unsqueeze(2)
-#     #     return torch.eye(y.shape[1]).repeat(y.shape[0], 1, 1).to(device)*n
 
-#     # def metric(y):
-#     #     d = y-y_obs
-#     #     k = (torch.norm(d, dim=1) - r).unsqueeze(1).unsqueeze(2)
-#     #     k = torch.exp(a_obs/(b_obs*torch.pow(k, b_obs)))
-#     #     return torch.bmm(d.unsqueeze(2), d.unsqueeze(1)) * (k-1) + torch.eye(y.shape[1]).repeat(y.shape[0], 1, 1).to(y.device)
 
-#     # def metric(y):
-#     #     d = (torch.norm(y-y_obs, dim=1) + r+0.05).unsqueeze(1).unsqueeze(2) + 1
-#     #     dd = 0.5*(y-y_obs)/torch.norm(y-y_obs, dim=1).unsqueeze(1)
-#     #     return torch.bmm(dd.unsqueeze(2), dd.unsqueeze(1)) * torch.exp(a_obs/(b_obs*torch.pow(d, b_obs))) + 0.01*torch.eye(y.shape[1]).repeat(y.shape[0], 1, 1).to(y.device)
+# Metrics
+def metric_exp(y):
+    d = y-y_obs
+    sigma = r
+    k = eta*torch.exp(-0.5*torch.sum(d.pow(2), dim=1) /
+                      sigma ** 2).unsqueeze(1).unsqueeze(2)
+    return torch.bmm(d.unsqueeze(2), d.unsqueeze(1)) * k.pow(2)/np.power(sigma, 4) + torch.eye(y.shape[1]).repeat(y.shape[0], 1, 1).to(y.device)
 
-#     def metric(y):
-#         d = y-y_obs
-#         sigma = r + 0.1
-#         k = eta*torch.exp(-0.5*torch.sum(d.pow(2), dim=1) /
-#                           sigma ** 2).unsqueeze(1).unsqueeze(2)
-#         return torch.bmm(d.unsqueeze(2), d.unsqueeze(1)) * k.pow(2)/np.power(sigma, 4) + torch.eye(y.shape[1]).repeat(y.shape[0], 1, 1).to(y.device)
-# else:
-#     def metric(y):
-#         g = torch.eye(y.shape[1])
-#         return g.repeat(y.shape[0], 1, 1).to(device)
-# ds.embedding.metric = metric
 
-ds.embedding.obstacles = torch.tensor([[0.0000,   -0.1000]]).to(device)
+def metric_infty(y):
+    d = y-y_obs
+    k = (torch.norm(d, dim=1) - r).unsqueeze(1).unsqueeze(2)
+    k = torch.exp(a_obs/(b_obs*torch.pow(k, b_obs)))
+    return torch.bmm(d.unsqueeze(2), d.unsqueeze(1)) * (k-1) + torch.eye(y.shape[1]).repeat(y.shape[0], 1, 1).to(y.device)
+
+
+if obstacle:
+    ds.embedding.metric = metric_exp
+    ds.embedding.metric = metric_infty
+    ds.embedding.obstacles = torch.tensor([[0.0000,   -0.1000]]).to(device)
 
 # Potential
 phi = ds.potential(x_test)
@@ -147,10 +131,10 @@ box_side = 0.03
 a = [x_train[0, 0] - box_side, x_train[0, 1] - box_side]
 b = [x_train[0, 0] + box_side, x_train[0, 1] + box_side]
 
-T = 5
+T = 10
 dt = 0.01
 steps = int(np.ceil(T/dt))
-num_samples = 3
+num_samples = 1
 samples = []
 
 for i in range(num_samples):
@@ -159,31 +143,18 @@ for i in range(num_samples):
     state[0, 1] = np.random.uniform(a[1], b[1])
     samples.append(state)
 
-# samples[0][0, :dim] = np.array([-0.5, 0])
+# samples[0][0, :dim] = np.array([-0.4, -0.14])
 
-if not first:
-    for step in range(steps-1):
-        for i in range(num_samples):
-            X_sample = torch.from_numpy(samples[i][step, :]).float().to(
-                device).requires_grad_(True).unsqueeze(0)
-            samples[i][step+1, dim:] = samples[i][step, dim:] + \
-                dt*ds(X_sample).cpu().detach().numpy()
-            samples[i][step+1, :dim] = samples[i][step, :dim] + \
-                dt*samples[i][step+1, dim:]
-else:
-    for step in range(steps-1):
-        for i in range(num_samples):
-            X_sample = torch.from_numpy(samples[i][step, :dim]).float().to(
-                device).requires_grad_(True).unsqueeze(0)
-            samples[i][step+1, dim:] = ds(X_sample).cpu().detach().numpy()
-            samples[i][step+1, :dim] = samples[i][step, :dim] + \
-                dt*samples[i][step+1, dim:]
+for step in range(steps-1):
+    for i in range(num_samples):
+        X_sample = torch.from_numpy(samples[i][step, :dim]).float().to(
+            device).requires_grad_(True).unsqueeze(0)
+        samples[i][step+1, dim:] = ds(X_sample).cpu().detach().numpy()
+        samples[i][step+1, :dim] = samples[i][step, :dim] + \
+            dt*samples[i][step+1, dim:]
 
 # Vector Field
-if first:
-    field = ds(X_test[:, :dim])
-else:
-    field = X_test[:, dim:] + dt * ds(X_test)
+field = ds(X_test[:, :dim])
 field = field.cpu().detach().numpy()
 x_field = field[:, 0].reshape(resolution, -1, order="F")
 y_field = field[:, 1].reshape(resolution, -1, order="F")
@@ -216,7 +187,7 @@ if obstacle:
     u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
     obs_x = y_obs[0, 0] + r*np.cos(u)*np.sin(v)
     obs_y = y_obs[0, 1] + r*np.sin(u)*np.sin(v)
-    obs_z = y_obs[0, 2] + 1.2*np.cos(v)
+    obs_z = y_obs[0, 2] + 0.6*np.cos(v)
     ax.plot_surface(obs_x, obs_y, obs_z, linewidth=0.0,
                     cstride=1, rstride=1)
 
