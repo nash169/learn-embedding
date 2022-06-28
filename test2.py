@@ -3,6 +3,7 @@
 import copy
 import os
 import sys
+from more_itertools import sample
 import numpy as np
 import torch
 import torch.nn as nn
@@ -14,7 +15,7 @@ from src.coupling_layer import CouplingLayer
 from src.feedforward import FeedForward
 from src.embedding import Embedding
 from src.parametrization import SPD, Diagonal, Fixed, Spherical
-from src.dynamics_second import DynamicsSecond
+from src.dynamics_second import DynamicsSecond, ZeroVelocity
 from src.dynamics_first import DynamicsFirst
 
 # User input
@@ -55,8 +56,8 @@ X_test = torch.from_numpy(
     X_test).float().to(device).requires_grad_(True)
 
 # Function approximator
-# approximator = KernelMachine(dim, 1000, 1, length=0.3)
-approximator = FeedForward(dim, [64, 64, 64], 1)
+# approximator = KernelMachine(dim, 500, 1, length=0.3)
+approximator = FeedForward(dim, [64], 1)
 # layers = nn.ModuleList()
 # layers.append(KernelMachine(dim, 250, dim+1, length=0.45))
 # for i in range(2):
@@ -80,8 +81,10 @@ ds1.eval()
 
 # Dynamics Second
 dissipation = copy.deepcopy(stiffness)
-dissipation.eig_ = nn.Parameter(5*torch.sqrt(dissipation.eig_))
-# dissipation = Fixed(dim)
+dissipation.eig_ = nn.Parameter(2*torch.sqrt(dissipation.eig_))
+
+# dissipation = SPD(dim)
+
 # L, V = torch.linalg.eig(stiffness.spd.weight.data)
 # dissipation.fixed = torch.mm(torch.real(V.transpose(1, 0)), torch.mm(torch.diag(
 #     2*torch.sqrt(torch.real(L))), torch.real(V)))
@@ -89,9 +92,11 @@ dissipation.eig_ = nn.Parameter(5*torch.sqrt(dissipation.eig_))
 ds = DynamicsSecond(attractor, stiffness,
                     dissipation, embedding).to(device)
 ds.velocity_ = ds1
-# ds.load_state_dict(torch.load(os.path.join(
-#     'models', '{}.pt'.format(dataset+"2")), map_location=torch.device(device)))
-# ds.eval()
+ds.load_state_dict(torch.load(os.path.join(
+    'models', '{}.pt'.format(dataset+"2")), map_location=torch.device(device)))
+ds.eval()
+# ds.velocity_ = ds1
+# ds.velocity_ = ZeroVelocity()
 
 
 # Obstacle
@@ -146,29 +151,41 @@ box_side = 0.03
 a = [x_train[0, 0] - box_side, x_train[0, 1] - box_side]
 b = [x_train[0, 0] + box_side, x_train[0, 1] + box_side]
 
-T = 10
-dt = 0.01
+T = 5
+dt = 0.001
 steps = int(np.ceil(T/dt))
-num_samples = 1
-samples = []
+num_samples = 3
 
-for i in range(num_samples):
-    state = np.zeros([steps, 2*dim])
-    state[0, 0] = np.random.uniform(a[0], b[0])
-    state[0, 1] = np.random.uniform(a[1], b[1])
-    samples.append(state)
-
-# x_train[0, :]  # np.array([-0.5, 0])
-# samples[0][0, :dim] = np.array([-0.4, -0.14])
+samples = np.zeros((steps, num_samples, 2*dim))
+samples[0, :, 0] = np.random.uniform(a[0], b[0], num_samples)
+samples[0, :, 1] = np.random.uniform(a[1], b[1], num_samples)
 
 for step in range(steps-1):
-    for i in range(num_samples):
-        X_sample = torch.from_numpy(samples[i][step, :]).float().to(
-            device).requires_grad_(True).unsqueeze(0)
-        samples[i][step+1, dim:] = samples[i][step, dim:] + \
-            dt*ds(X_sample).cpu().detach().numpy()
-        samples[i][step+1, :dim] = samples[i][step, :dim] + \
-            dt*samples[i][step+1, dim:]
+    state = torch.from_numpy(samples[step, :, :]).float().to(
+        device).requires_grad_(True)
+    samples[step+1, :, dim:] = samples[step, :, dim:] + \
+        dt*ds(state).cpu().detach().numpy()
+    samples[step+1, :, :dim] = samples[step,
+                                       :, :dim] + dt*samples[step+1, :, dim:]
+
+# samples = []
+# for i in range(num_samples):
+#     state = np.zeros([steps, 2*dim])
+#     state[0, 0] = np.random.uniform(a[0], b[0])
+#     state[0, 1] = np.random.uniform(a[1], b[1])
+#     samples.append(state)
+
+# samples[0][0, :dim] = x_train[0, :]
+# samples[0][0, dim:] = dx_train[0, :]
+
+# for step in range(steps-1):
+#     for i in range(num_samples):
+#         X_sample = torch.from_numpy(samples[i][step, :]).float().to(
+#             device).requires_grad_(True).unsqueeze(0)
+#         samples[i][step+1, dim:] = samples[i][step, dim:] + \
+#             dt*ds(X_sample).cpu().detach().numpy()
+#         samples[i][step+1, :dim] = samples[i][step, :dim] + \
+#             dt*samples[i][step+1, dim:]
 
 # Vector Field
 field = X_test[:, dim:] + dt * ds(X_test)
@@ -219,7 +236,7 @@ ax.axis('square')
 fig.colorbar(mappable,  ax=ax, label=r"$\phi$")
 
 for i in range(num_samples):
-    ax.plot(samples[i][:, 0], samples[i][:, 1], color='k')
+    ax.plot(samples[:, i, 0], samples[:, i, 1], color='k')
 rect = patches.Rectangle((x_train[0, 0] - box_side, x_train[0, 1] - box_side),
                          2*box_side, 2*box_side, linewidth=1, edgecolor='k', facecolor='none')
 ax.add_patch(rect)

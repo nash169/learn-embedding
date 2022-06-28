@@ -25,7 +25,7 @@ class DynamicsFirst(nn.Module):
         # metric
         m = self.embedding.pullmetric(y, j)
 
-        return (torch.bmm(m.inverse(), -self.stiffness(x-self.attractor).unsqueeze(2))).squeeze()
+        return (torch.bmm(m.inverse(), -self.stiffness(x-self.attractor).unsqueeze(2))).squeeze(2)
 
     # Potential function
     def potential(self, x):

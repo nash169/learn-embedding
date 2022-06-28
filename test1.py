@@ -55,8 +55,8 @@ X_test = torch.from_numpy(
     X_test).float().to(device).requires_grad_(True)
 
 # Function approximator
-# approximator = KernelMachine(dim, 1000, 1, length=0.3)
-approximator = FeedForward(dim, [64, 64, 64], 1)
+# approximator = KernelMachine(dim, 500, 1, length=0.3)
+approximator = FeedForward(dim, [64], 1)
 # layers = nn.ModuleList()
 # layers.append(KernelMachine(dim, 250, dim+1, length=0.45))
 # for i in range(2):
@@ -65,7 +65,7 @@ approximator = FeedForward(dim, [64, 64, 64], 1)
 
 # Embedding
 embedding = Embedding(approximator)
-embedding.apply(embedding.init_weights)
+# embedding.apply(embedding.init_weights)
 
 # Attractor
 attractor = X[-1, :dim]
@@ -134,7 +134,7 @@ b = [x_train[0, 0] + box_side, x_train[0, 1] + box_side]
 T = 10
 dt = 0.01
 steps = int(np.ceil(T/dt))
-num_samples = 1
+num_samples = 3
 samples = []
 
 for i in range(num_samples):

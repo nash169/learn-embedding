@@ -36,8 +36,8 @@ X = torch.from_numpy(data[:, :2*dim]).float().to(device)
 Y = torch.from_numpy(data[:, 2*dim:]).float().to(device)
 
 # Function approximator
-# approximator = KernelMachine(dim, 1000, 1, length=0.1)
-approximator = FeedForward(dim, [64, 64, 64], 1)
+# approximator = KernelMachine(dim, 500, 1, length=0.3)
+approximator = FeedForward(dim, [64], 1)
 # layers = nn.ModuleList()
 # layers.append(KernelMachine(dim, 250, dim+1, length=0.45))
 # for i in range(2):
@@ -46,6 +46,7 @@ approximator = FeedForward(dim, [64, 64, 64], 1)
 
 # Embedding
 embedding = Embedding(approximator)
+# embedding.apply(embedding.init_weights)
 
 # Attractor
 attractor = X[-1, :dim]
@@ -63,8 +64,8 @@ trainer.optimizer = torch.optim.Adam(
     trainer.model.parameters(), lr=1e-3, weight_decay=1e-8)
 
 # Set trainer loss
-trainer.loss = torch.nn.MSELoss()
-# trainer.loss = torch.nn.SmoothL1Loss()
+# trainer.loss = torch.nn.MSELoss()
+trainer.loss = torch.nn.SmoothL1Loss()
 
 # Set trainer options
 trainer.options(normalize=False, shuffle=True, print_loss=True,

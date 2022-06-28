@@ -105,7 +105,7 @@ class SPD(nn.Module):
         self.vec_ = nn.Parameter(torch.rand(in_features))
 
     def forward(self, x):
-        D = torch.diag(self.eig_).square()
+        D = torch.diag(self.eig_).exp()
         U, _ = torch.linalg.qr(torch.cat((self.vec_.unsqueeze(1),
                                           torch.rand(self.vec_.shape[0], self.vec_.shape[0]-1).to(x.device)), dim=1))
         return nn.functional.linear(x, torch.mm(U.transpose(1, 0), torch.mm(D, U)).to(x.device))

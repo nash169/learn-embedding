@@ -38,8 +38,8 @@ X = torch.from_numpy(data[:, :2*dim]).float().to(device)
 Y = torch.from_numpy(data[:, 2*dim:]).float().to(device)
 
 # Function approximator
-# approximator = KernelMachine(dim, 1000, 1, length=0.1)
-approximator = FeedForward(dim, [64, 64, 64], 1)
+# approximator = KernelMachine(dim, 500, 1, length=0.3)
+approximator = FeedForward(dim, [64], 1)
 # layers = nn.ModuleList()
 # layers.append(KernelMachine(dim, 250, dim+1, length=0.45))
 # for i in range(2):
@@ -59,17 +59,18 @@ ds1.load_state_dict(torch.load(os.path.join(
 ds1.eval()
 
 # Dynamics second
-embedding_2 = embedding_1  # copy.deepcopy()
-stiffness_2 = stiffness_1
-dissipation = SPD(dim)
+embedding_2 = embedding_1  # copy.deepcopy(embedding_1)
+stiffness_2 = stiffness_1  # copy.deepcopy(stiffness_1)
+dissipation = copy.deepcopy(stiffness_1)
+# dissipation.vec_ = nn.Parameter(dissipation.vec_.data, requires_grad=False)
 
 ds = DynamicsSecond(attractor, stiffness_2,
                     dissipation, embedding_2).to(device)
 ds.velocity_ = ds1
 
-# Fix first DS parameters
-for param in ds1.parameters():
-    param.requires_grad = False
+# # Fix first DS parameters
+# for param in ds1.parameters():
+#     param.requires_grad = False
 
 # # Fix stiffness hyperparameters
 # for param in stiffness.parameters():
@@ -92,7 +93,7 @@ trainer.loss = torch.nn.MSELoss()
 
 # Set trainer options
 trainer.options(normalize=False, shuffle=True, print_loss=True,
-                epochs=5000, load_model=(dataset+"2" if load else None))
+                epochs=10000, load_model=(dataset+"2" if load else None))
 
 # Train model
 trainer.train()

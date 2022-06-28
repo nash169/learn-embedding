@@ -1,12 +1,17 @@
 #!/usr/bin/env python
 
+from turtle import forward
 import torch
 import torch.nn as nn
 
 
 # Default desired velocity
-def zero_velocity(x):
-    return 0
+class ZeroVelocity(nn.Module):
+    def __init__(self):
+        super(ZeroVelocity, self).__init__()
+
+    def forward(self, x):
+        return 0
 
 
 class DynamicsSecond(nn.Module):
@@ -21,7 +26,7 @@ class DynamicsSecond(nn.Module):
 
         self.embedding = embedding
 
-        self.velocity_ = zero_velocity
+        self.velocity_ = ZeroVelocity()
 
     # Forward network pass
     def forward(self, X):
@@ -45,7 +50,7 @@ class DynamicsSecond(nn.Module):
         xd = x - self.attractor
         vd = v - self.velocity(x)
 
-        return (torch.bmm(m.inverse(), -(self.dissipation(vd)+self.stiffness(xd)).unsqueeze(2)) - torch.bmm(torch.einsum('bqij,bi->bqj', g, vd), vd.unsqueeze(2))).squeeze()
+        return (torch.bmm(m.inverse(), -(self.dissipation(vd)+self.stiffness(xd)).unsqueeze(2)) - torch.bmm(torch.einsum('bqij,bi->bqj', g, vd), vd.unsqueeze(2))).squeeze(2)
 
     # Potential function
     def potential(self, x):
