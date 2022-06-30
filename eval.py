@@ -5,6 +5,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
+import copy
 
 from src.kernel_machine import KernelMachine
 from src.coupling_layer import CouplingLayer
@@ -26,9 +27,10 @@ device = torch.device("cuda" if use_cuda else "cpu")
 # Datasets
 l = os.listdir('trainset')
 li = [x.split('.')[0] for x in l]
+li = ['Angle', 'Khamesh']
 
 # Number of reps
-reps = 5
+reps = 2
 
 for dataset in li:
     dtw = []
@@ -45,38 +47,46 @@ for dataset in li:
         Y = torch.from_numpy(data[:, 2*dim:]).float().to(device)
         attractor = X[-1, :dim]
 
-        # Model
-        approximator = FeedForward(dim, [128, 128, 128], 1)
-        embedding = Embedding(approximator)
-        stiffness = SPD(dim)
-        ds1 = DynamicsFirst(attractor, stiffness, embedding).to(device)
+        # Function Approximator
+        approximator = FeedForward(dim, [64], 1)
 
-        # Trainer
+        # Model 1
+        embedding_1 = Embedding(approximator)
+        stiffness_1 = SPD(dim)
+        ds1 = DynamicsFirst(attractor, stiffness_1, embedding_1).to(device)
+
+        # Trainer 1
         trainer = Trainer(ds1, X[:, :dim], X[:, dim:])
         trainer.optimizer = torch.optim.Adam(
             trainer.model.parameters(), lr=1e-3, weight_decay=1e-8)
-        trainer.loss = torch.nn.MSELoss()
+        # trainer.loss = torch.nn.MSELoss()
+        trainer.loss = torch.nn.SmoothL1Loss()
         trainer.options(normalize=False, shuffle=True, print_loss=True,
                         epochs=10000, load_model=None)
         trainer.train()
-
-        # Fix first DS parameters
-        for param in ds1.parameters():
-            param.requires_grad = False
+        trainer.save(dataset+"1")
 
         # Model 2
-        ds = DynamicsSecond(attractor, stiffness,
-                            SPD(dim), embedding).to(device)
+        embedding_2 = embedding_1
+        stiffness_2 = stiffness_1
+        dissipation = copy.deepcopy(stiffness_1)
+        ds = DynamicsSecond(attractor, stiffness_2,
+                            dissipation, embedding_2).to(device)
         ds.velocity_ = ds1
+
+        # # Fix first DS parameters
+        # for param in ds1.parameters():
+        #     param.requires_grad = False
 
         # Trainer 2
         trainer.model = ds
         trainer.input = X
         trainer.target = Y
         trainer.optimizer = torch.optim.Adam(
-            trainer.model.parameters(), lr=1e-4, weight_decay=1e-8)
-        trainer.options(epochs=5000, load_model=None)
+            trainer.model.parameters(), lr=1e-3, weight_decay=1e-8)
+        trainer.options(epochs=10000, load_model=None)
         trainer.train()
+        trainer.save(dataset+"2")
 
         # Test data
         resolution = 100
@@ -168,8 +178,12 @@ for dataset in li:
 eval = np.zeros([len(li), 3, 2])
 for i, dataset in enumerate(li):
     data = np.loadtxt(os.path.join('results', '{}.csv'.format(dataset)))
-    eval[i, :, 0] = data.mean(axis=1)
-    eval[i, :, 1] = data.std(axis=1)
+    if len(data.shape) > 1:
+        eval[i, :, 0] = data.mean(axis=1)
+        eval[i, :, 1] = data.std(axis=1)
+    else:
+        eval[i, :, 0] = data
+        eval[i, :, 1] = 0
 
 with open(os.path.join('results', '{}.csv'.format("eval")), "ab") as f:
     for i in range(3):
