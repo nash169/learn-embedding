@@ -52,6 +52,7 @@ class DynamicsSecond(nn.Module):
 
         # return -torch.bmm(torch.einsum('bqij,bi->bqj', g, vd), vd.unsqueeze(2)).squeeze(2)
         return (torch.bmm(m.inverse(), -(self.dissipation(vd)+self.stiffness(xd)).unsqueeze(2)) - torch.bmm(torch.einsum('bqij,bi->bqj', g, vd), vd.unsqueeze(2))).squeeze(2)
+        # return (torch.bmm(m.inverse(), -self.stiffness(xd).unsqueeze(2)) - self.dissipation(vd).unsqueeze(2) - torch.bmm(torch.einsum('bqij,bi->bqj', g, vd), vd.unsqueeze(2))).squeeze(2)
 
     # Potential function
     def potential(self, x):
