@@ -81,7 +81,7 @@ embedding_2 = copy.deepcopy(embedding_1)
 
 stiffness_2 = SPD(dim)
 stiffness_2.vec_ = nn.Parameter(torch.tensor([1.0, 0.0]))
-lambda_2 = 0.5
+lambda_2 = 2
 stiffness_2.eig_ = nn.Parameter(lambda_2 * torch.ones(2))
 
 dissipation = copy.deepcopy(stiffness_2)
@@ -90,7 +90,7 @@ dissipation.eig_ = nn.Parameter(lambda_3 * torch.ones(2))
 
 ds = DynamicsSecond(attractor, stiffness_2,
                     dissipation, embedding_2).to(device)
-# ds.velocity_ = ds1
+ds.velocity_ = ds1
 # ds.velocity_ = ZeroVelocity()
 # ds.load_state_dict(torch.load(os.path.join(
 #     'models', '{}.pt'.format(dataset+"2")), map_location=torch.device(device)))
@@ -129,7 +129,7 @@ if obstacle:
     # ds.embedding.metric = metric_infty
 
     # ds.embedding.deformation = lambda x, y: infty_exp(
-    #     x, y, r=0.005, a=0.005, b=2)
+    #     x, y, r=0.05, a=0.05, b=2)
     ds.embedding.deformation = lambda x, y: squared_exp(
         x, y, sigma=0.05, eta=10)
     ds.embedding.obstacles = x_obs
@@ -159,7 +159,7 @@ start_point = torch.tensor([-0.5, -0.66])
 a = [start_point[0] - box_side, start_point[1] - box_side]
 b = [start_point[0] + box_side, start_point[1] + box_side]
 
-T = 5
+T = 10
 dt = 0.001
 steps = int(np.ceil(T/dt))
 num_samples = 1
