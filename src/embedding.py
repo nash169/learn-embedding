@@ -21,14 +21,22 @@ class Embedding(nn.Module):
         # Default ambient metric
         self.metric = identity
 
+        # Default local obstacle deformation
+        self.deformation = lambda x, y: squared_exp(
+            x, y, sigma=0.05, eta=10)
+
     def forward(self, x):
         y = self.net_(x)
 
         if hasattr(self, 'obstacles'):
-            y += squared_exp(x, self.obstacles, sigma=0.05,
-                             eta=10).to(x.device)
+            y += torch.sum(self.deformation(x, self.obstacles),
+                           axis=1).unsqueeze(1).to(x.device)
+            # y += torch.sum(infty_exp(x, self.obstacles),
+            #                axis=1).unsqueeze(1).to(x.device)
+            # y += torch.sum(squared_exp(x, self.obstacles, sigma=0.05,
+            #                            eta=10), axis=1).unsqueeze(1).to(x.device)
 
-        y[y == torch.inf] = 100
+        y[y >= 100] = 100
 
         return torch.concat((x, y), axis=1)
         # return torch.concat((x, self.net_(x)), axis=1)
@@ -72,8 +80,8 @@ class Embedding(nn.Module):
 
     def init_weights(self, m):
         if isinstance(m, nn.Linear):
-            nn.init.normal_(m.weight, mean=0.0, std=0.1)
-            nn.init.constant_(m.bias, 0.1)
+            nn.init.normal_(m.weight, mean=0.0, std=0.0)
+            nn.init.constant_(m.bias, 0.0)
 
     # Ambient space metric
     @ property
@@ -92,3 +100,12 @@ class Embedding(nn.Module):
     @ obstacles.setter
     def obstacles(self, value):
         self.obstacles_ = value
+
+    # Local deformation
+    @ property
+    def deformation(self):
+        return self.deformation_
+
+    @ deformation.setter
+    def deformation(self, value):
+        self.deformation_ = value

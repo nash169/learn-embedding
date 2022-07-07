@@ -50,6 +50,7 @@ class DynamicsSecond(nn.Module):
         xd = x - self.attractor
         vd = v - self.velocity(x)
 
+        # return -torch.bmm(torch.einsum('bqij,bi->bqj', g, vd), vd.unsqueeze(2)).squeeze(2)
         return (torch.bmm(m.inverse(), -(self.dissipation(vd)+self.stiffness(xd)).unsqueeze(2)) - torch.bmm(torch.einsum('bqij,bi->bqj', g, vd), vd.unsqueeze(2))).squeeze(2)
 
     # Potential function

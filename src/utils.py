@@ -17,12 +17,21 @@ def linear_map(x, xmin, xmax, ymin, ymax):
 
 # RBF kernel
 def squared_exp(x, y, sigma=1, eta=1):
-    return eta*torch.exp(-0.5*torch.sum((x-y).pow(2), dim=1) / sigma ** 2).unsqueeze(1)
+    l = -.5 / sigma**2
+    xx = torch.einsum('ij,ij->i', x, x).unsqueeze(1)
+    yy = torch.einsum('ij,ij->i', y, y).unsqueeze(0)
+    k = -2 * torch.mm(x, y.T) + xx + yy
+    k *= l
+
+    return eta*torch.exp(k)
 
 
 # Control barrier function
 def infty_exp(x, y, r=1, a=1, b=2):
-    return torch.exp(a/(b*torch.pow(torch.norm(x-y, dim=1) - r, b))).unsqueeze(1)
+    xx = torch.einsum('ij,ij->i', x, x).unsqueeze(1)
+    yy = torch.einsum('ij,ij->i', y, y).unsqueeze(0)
+    k = -2 * torch.mm(x, y.T) + xx + yy
+    return torch.exp(a/(b*torch.pow(k.sqrt() - r, b))) - 1
 
 
 # Save model/dict

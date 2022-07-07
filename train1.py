@@ -36,7 +36,7 @@ X = torch.from_numpy(data[:, :2*dim]).float().to(device)
 Y = torch.from_numpy(data[:, 2*dim:]).float().to(device)
 
 # Function approximator
-# approximator = KernelMachine(dim, 500, 1, length=0.3)
+# approximator = KernelMachine(dim, 1000, 1, length=0.4)
 approximator = FeedForward(dim, [64], 1)
 # layers = nn.ModuleList()
 # layers.append(KernelMachine(dim, 250, dim+1, length=0.45))
