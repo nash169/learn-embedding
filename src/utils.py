@@ -22,7 +22,6 @@ def squared_exp(x, y, sigma=1, eta=1):
     yy = torch.einsum('ij,ij->i', y, y).unsqueeze(0)
     k = -2 * torch.mm(x, y.T) + xx + yy
     k *= l
-
     return eta*torch.exp(k)
 
 
@@ -32,6 +31,13 @@ def infty_exp(x, y, r=1, a=1, b=2):
     yy = torch.einsum('ij,ij->i', y, y).unsqueeze(0)
     k = -2 * torch.mm(x, y.T) + xx + yy
     return torch.exp(a/(b*torch.pow(k.sqrt() - r, b))) - 1
+
+
+def paraboloid(x, y):
+    xx = torch.einsum('ij,ij->i', x, x).unsqueeze(1)
+    yy = torch.einsum('ij,ij->i', y, y).unsqueeze(0)
+    k = -2 * torch.mm(x, y.T) + xx + yy
+    return k.pow(2)
 
 
 # Save model/dict
