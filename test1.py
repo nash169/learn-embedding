@@ -73,9 +73,9 @@ stiffness.eig_ = nn.Parameter(lambda_1 * torch.ones(2))
 
 # Dynamics
 ds = DynamicsFirst(attractor, stiffness, embedding).to(device)
-# ds.load_state_dict(torch.load(os.path.join(
-#     'models', '{}.pt'.format(dataset+"1")), map_location=torch.device(device)))
-# ds.eval()
+ds.load_state_dict(torch.load(os.path.join(
+    'models', '{}.pt'.format(dataset+"1")), map_location=torch.device(device)))
+ds.eval()
 
 # Obstacle
 a_obs, b_obs, eta = 1, 2, 1
@@ -137,8 +137,8 @@ train_embedding = ds.embedding(X[:, :dim]).cpu().detach().numpy()
 
 # Sampled Dynamics
 box_side = 0.03
-# start_point = x_train[1005, :]
-start_point = torch.tensor([-0.5, -0.66])
+start_point = x_train[1005, :]
+# start_point = torch.tensor([-0.5, -0.66])
 a = [start_point[0] - box_side, start_point[1] - box_side]
 b = [start_point[0] + box_side, start_point[1] + box_side]
 

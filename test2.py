@@ -13,7 +13,7 @@ from src.kernel_machine import KernelMachine
 from src.coupling_layer import CouplingLayer
 from src.feedforward import FeedForward
 from src.embedding import Embedding
-from src.parametrization import SPD, Diagonal, Fixed, Spherical
+from src.parametrization import SPD, Diagonal, Fixed, Rotation, Spherical
 from src.dynamics_second import DynamicsSecond, ZeroVelocity
 from src.dynamics_first import DynamicsFirst
 from src.utils import squared_exp, infty_exp
@@ -55,20 +55,18 @@ x_test = torch.from_numpy(
 X_test = torch.from_numpy(
     X_test).float().to(device).requires_grad_(True)
 
-# Function approximator
-# approximator = KernelMachine(dim, 500, 1, length=0.3)
-approximator = FeedForward(dim, [64], 1)
-
 # Attractor
 attractor = X[-1, :dim]
 
 # Dynamics First
-embedding_1 = Embedding(approximator)
+# approximator_1 = KernelMachine(dim, 500, 1, length=0.3)
+approximator_1 = FeedForward(dim, [64], 1)
+embedding_1 = Embedding(approximator_1)
 embedding_1.apply(embedding_1.init_weights)
 
 stiffness_1 = SPD(dim)
 stiffness_1.vec_ = nn.Parameter(torch.tensor([1.0, 0.0]))
-lambda_1 = -3
+lambda_1 = -2
 stiffness_1.eig_ = nn.Parameter(lambda_1 * torch.ones(2))
 
 ds1 = DynamicsFirst(attractor, stiffness_1, embedding_1).to(device)
@@ -77,21 +75,24 @@ ds1 = DynamicsFirst(attractor, stiffness_1, embedding_1).to(device)
 # ds1.eval()
 
 # Dynamics Second
-embedding_2 = copy.deepcopy(embedding_1)
+approximator_2 = FeedForward(dim, [64], 1)
+embedding_2 = Embedding(approximator_2)
+# embedding_2 = copy.deepcopy(embedding_1)
+embedding_2.apply(embedding_2.init_weights)
 
-stiffness_2 = SPD(dim)
+stiffness_2 = copy.deepcopy(stiffness_1)  # SPD(dim)
 stiffness_2.vec_ = nn.Parameter(torch.tensor([1.0, 0.0]))
-lambda_2 = 2
+lambda_2 = 0
 stiffness_2.eig_ = nn.Parameter(lambda_2 * torch.ones(2))
 
 dissipation = copy.deepcopy(stiffness_2)
 lambda_3 = np.log(2) + lambda_2
 dissipation.eig_ = nn.Parameter(lambda_3 * torch.ones(2))
+# dissipation.eig_ = nn.Parameter(np.log(2) + dissipation.eig_.data)
 
 ds = DynamicsSecond(attractor, stiffness_2,
                     dissipation, embedding_2).to(device)
 ds.velocity_ = ds1
-# ds.velocity_ = ZeroVelocity()
 # ds.load_state_dict(torch.load(os.path.join(
 #     'models', '{}.pt'.format(dataset+"2")), map_location=torch.device(device)))
 # ds.eval()
@@ -104,7 +105,7 @@ c = torch.tensor([[0.0000,   -0.1000]]).to(device)
 r = 0.2
 concave_obs = c + r*torch.cat((np.cos(theta), np.sin(theta)), axis=1)
 
-x_obs = torch.tensor([[0.0000,   -0.1000]]).to(device)
+x_obs = concave_obs  # torch.tensor([[0.0000,   -0.1000]]).to(device)
 y_obs = ds.embedding(x_obs)
 
 
@@ -154,13 +155,13 @@ train_embedding = ds.embedding(X[:, :dim]).cpu().detach().numpy()
 
 # Sampled Dynamics
 box_side = 0.03
-# start_point = x_train[1005, :]
-start_point = torch.tensor([-0.5, -0.66])
+start_point = x_train[1005, :]
+# start_point = torch.tensor([-0.5, -0.66])
 a = [start_point[0] - box_side, start_point[1] - box_side]
 b = [start_point[0] + box_side, start_point[1] + box_side]
 
-T = 10
-dt = 0.001
+T = 2
+dt = 0.01
 steps = int(np.ceil(T/dt))
 num_samples = 1
 
@@ -168,9 +169,10 @@ samples = np.zeros((steps, num_samples, 2*dim))
 samples[0, :, 0] = np.random.uniform(a[0], b[0], num_samples)
 samples[0, :, 1] = np.random.uniform(a[1], b[1], num_samples)
 
-samples[0, 0, :dim] = np.array([-0.49933788, -0.67346152])
+samples[0, 0, :dim] = np.array([-0.49991225, -0.64640907])
 samples[0, 0, dim:] = 1 * \
     (attractor.cpu().detach().numpy() - samples[0, 0, :dim])
+# samples[0, 0, dim:] = dx_train[1005, :]
 
 for step in range(steps-1):
     state = torch.from_numpy(samples[step, :, :]).float().to(
@@ -229,7 +231,7 @@ fig = plt.figure()
 ax = fig.add_subplot(111)
 fig.colorbar(mappable,  ax=ax, label=r"$\phi$")
 
-ax.streamplot(x_mesh, y_mesh, x_field, y_field, color=phi, cmap="jet")
+# ax.streamplot(x_mesh, y_mesh, x_field, y_field, color=phi, cmap="jet")
 for i in range(num_samples):
     ax.plot(samples[:, i, 0], samples[:, i, 1], color='k')
 rect = patches.Rectangle((start_point[0] - box_side, start_point[1] - box_side),
@@ -240,15 +242,26 @@ ax.scatter(x_train[::10, 0], x_train[::10, 1],
 ax.scatter(x_train[-1, 0], x_train[-1, 1], s=100,
            edgecolors='k', c='yellow', marker="*")
 if obstacle:
-    x_obs = x_obs.cpu().detach().numpy()
-    circ = plt.Circle((x_obs[0, 0], x_obs[0, 1]), r_obs,
-                      color='k', fill='grey', alpha=0.5)
-    ax.add_patch(circ)
-    # concave_obs = concave_obs.cpu().detach().numpy()
-    # ax.scatter(concave_obs[:, 0], concave_obs[:, 1])
+    # x_obs = x_obs.cpu().detach().numpy()
+    # circ = plt.Circle((x_obs[0, 0], x_obs[0, 1]), r_obs,
+    #                   color='k', fill='grey', alpha=0.5)
+    # ax.add_patch(circ)
+    concave_obs = concave_obs.cpu().detach().numpy()
+    ax.scatter(concave_obs[:, 0], concave_obs[:, 1])
 
 ax.axis('square')
 ax.set_xlabel('$x^1$')
 ax.set_ylabel('$x^2$')
+
+# Plot time response
+fig = plt.figure()
+ax = fig.add_subplot(211)
+for i in range(num_samples):
+    ax.plot(np.arange(0, T, dt),
+            samples[:, i, 0], color="C0", label="X position")
+ax = fig.add_subplot(212)
+for i in range(num_samples):
+    ax.plot(np.arange(0, T, dt),
+            samples[:, i, 1], color="C0", label="Y position")
 
 plt.show()
