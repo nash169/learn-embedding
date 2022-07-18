@@ -86,7 +86,7 @@ class Fixed(nn.Module):
     def forward(self, x):
         return self.fixed_(x)
 
-     # Params
+    # Params
     @property
     def fixed(self):
         return self.fixed_
@@ -109,3 +109,24 @@ class SPD(nn.Module):
         U, _ = torch.linalg.qr(torch.cat((self.vec_.unsqueeze(1),
                                           torch.rand(self.vec_.shape[0], self.vec_.shape[0]-1).to(x.device)), dim=1))
         return nn.functional.linear(x, torch.mm(U.transpose(1, 0), torch.mm(D, U)).to(x.device))
+
+
+class Rotation(nn.Module):
+    def __init__(self):
+        super(Rotation, self).__init__()
+
+        self.rotation_ = nn.Parameter(torch.tensor(0), requires_grad=False)
+
+    def forward(self, x):
+        R = torch.tensor([[self.rotation.cos(), -self.rotation.sin()],
+                         [self.rotation.sin(), self.rotation.cos()]]).to(x.device)
+        return nn.functional.linear(x, R)
+
+    # Params
+    @property
+    def rotation(self):
+        return self.rotation_
+
+    @rotation.setter
+    def rotation(self, value):
+        self.rotation_ = nn.Parameter(value, requires_grad=False)

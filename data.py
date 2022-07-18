@@ -5,8 +5,10 @@ import scipy.io as sio
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
+import torch
 
 from src.utils import linear_map
+from src.parametrization import Rotation
 
 dataset = sys.argv[1] if len(sys.argv) > 1 else "Angle"
 num_trajs = int(sys.argv[2]) if len(sys.argv) > 2 else 1
@@ -53,10 +55,25 @@ for i in range(data.shape[1]):
 
     trajs.append(np.concatenate((t, x, v, a), axis=1))
 
-
+# Trainig set
 trainset = trajs[0][init_cut:, 1:]
 for i in range(1, num_trajs):
     trainset = np.append(trainset, trajs[i][init_cut:, 1:], axis=0)
+
+# Augment training set via rotation
+num_data = trainset.shape[0]
+rot = Rotation()
+reps = 10
+for i in np.linspace(0+2*np.pi/reps, 2*np.pi, reps):
+    rot.rotation = torch.tensor(i, dtype=torch.float32)
+    pos = rot(torch.from_numpy(
+        trainset[:num_data, :dim]-trainset[num_data-1, :dim]).float()).cpu().detach().numpy() + trainset[num_data-1, :dim]
+    vel = rot(torch.from_numpy(
+        trainset[:num_data, dim:2*dim]).float()).cpu().detach().numpy()
+    acc = rot(torch.from_numpy(
+        trainset[:num_data, 2*dim:]).float()).cpu().detach().numpy()
+    trainset = np.append(trainset, np.concatenate(
+        (pos, vel, acc), axis=1), axis=0)
 
 testset = trajs[num_trajs][init_cut:, 1:]
 for i in range(num_trajs+1, len(trajs)):
