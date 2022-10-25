@@ -42,8 +42,8 @@ ddx_train = data[:, 2*dim:]
 # Test data
 resolution = 100
 lower, upper = -1, 1
-x_mesh, y_mesh = np.meshgrid(np.linspace(lower, upper, resolution),
-                             np.linspace(lower, upper, resolution))
+x_mesh, y_mesh = np.meshgrid(np.linspace(x_train[:, 0].min(), x_train[:, 0].max(), resolution),
+                             np.linspace(x_train[:, 1].min(), x_train[:, 1].max(), resolution))
 x_test = np.array(
     [x_mesh.ravel(order="F"), y_mesh.ravel(order="F")]).transpose()
 X_test = np.zeros([x_test.shape[0], 2*x_test.shape[1]])
