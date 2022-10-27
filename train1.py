@@ -36,8 +36,8 @@ X = torch.from_numpy(data[:, :2*dim]).float().to(device)
 Y = torch.from_numpy(data[:, 2*dim:]).float().to(device)
 
 # Function approximator
-# approximator = KernelMachine(dim, 1000, 1, length=0.4)
-approximator = FeedForward(dim, [64], 1)
+approximator = KernelMachine(dim, 1000, 1, length=0.4)
+# approximator = FeedForward(dim, [64], 1)
 # layers = nn.ModuleList()
 # layers.append(KernelMachine(dim, 250, dim+1, length=0.45))
 # for i in range(2):
@@ -71,8 +71,8 @@ trainer.loss = torch.nn.SmoothL1Loss()
 trainer.options(normalize=False, shuffle=True, print_loss=True,
                 epochs=10000, load_model=(dataset+"1" if load else None))
 
-# Train model
-trainer.train()
+# # Train model
+# trainer.train()
 
-# Save model
-trainer.save(dataset+"1")
+# # Save model
+# trainer.save(dataset+"1")
