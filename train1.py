@@ -9,6 +9,7 @@ import torch.nn as nn
 from src.kernel_machine import KernelMachine
 from src.coupling_layer import CouplingLayer
 from src.feedforward import FeedForward
+from src.kernel_expansion import KernelExpansion
 from src.embedding import Embedding
 from src.parametrization import SPD, Diagonal, Spherical, Fixed
 from src.dynamics_second import DynamicsSecond
@@ -36,7 +37,8 @@ X = torch.from_numpy(data[:, :2*dim]).float().to(device)
 Y = torch.from_numpy(data[:, 2*dim:]).float().to(device)
 
 # Function approximator
-approximator = KernelMachine(dim, 1000, 1, length=0.4)
+# approximator = KernelMachine(dim, 1000, 1, length=0.4)
+approximator = KernelExpansion(X[:, :dim])
 # approximator = FeedForward(dim, [64], 1)
 # layers = nn.ModuleList()
 # layers.append(KernelMachine(dim, 250, dim+1, length=0.45))
@@ -71,8 +73,8 @@ trainer.loss = torch.nn.SmoothL1Loss()
 trainer.options(normalize=False, shuffle=True, print_loss=True,
                 epochs=10000, load_model=(dataset+"1" if load else None))
 
-# # Train model
-# trainer.train()
+# Train model
+trainer.train()
 
-# # Save model
-# trainer.save(dataset+"1")
+# Save model
+trainer.save(dataset+"1")

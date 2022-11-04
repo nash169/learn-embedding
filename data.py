@@ -60,20 +60,20 @@ trainset = trajs[0][init_cut:, 1:]
 for i in range(1, num_trajs):
     trainset = np.append(trainset, trajs[i][init_cut:, 1:], axis=0)
 
-# Augment training set via rotation
-num_data = trainset.shape[0]
-rot = Rotation()
-reps = 10
-for i in np.linspace(0+2*np.pi/reps, 2*np.pi, reps):
-    rot.rotation = torch.tensor(i, dtype=torch.float32)
-    pos = rot(torch.from_numpy(
-        trainset[:num_data, :dim]-trainset[num_data-1, :dim]).float()).cpu().detach().numpy() + trainset[num_data-1, :dim]
-    vel = rot(torch.from_numpy(
-        trainset[:num_data, dim:2*dim]).float()).cpu().detach().numpy()
-    acc = rot(torch.from_numpy(
-        trainset[:num_data, 2*dim:]).float()).cpu().detach().numpy()
-    trainset = np.append(trainset, np.concatenate(
-        (pos, vel, acc), axis=1), axis=0)
+# # Augment training set via rotation
+# num_data = trainset.shape[0]
+# rot = Rotation()
+# reps = 10
+# for i in np.linspace(0+2*np.pi/reps, 2*np.pi, reps):
+#     rot.rotation = torch.tensor(i, dtype=torch.float32)
+#     pos = rot(torch.from_numpy(
+#         trainset[:num_data, :dim]-trainset[num_data-1, :dim]).float()).cpu().detach().numpy() + trainset[num_data-1, :dim]
+#     vel = rot(torch.from_numpy(
+#         trainset[:num_data, dim:2*dim]).float()).cpu().detach().numpy()
+#     acc = rot(torch.from_numpy(
+#         trainset[:num_data, 2*dim:]).float()).cpu().detach().numpy()
+#     trainset = np.append(trainset, np.concatenate(
+#         (pos, vel, acc), axis=1), axis=0)
 
 testset = trajs[num_trajs][init_cut:, 1:]
 for i in range(num_trajs+1, len(trajs)):
@@ -102,6 +102,7 @@ ax.quiver(trainset[init_cut::10, 0], trainset[init_cut::10, 1],
           trainset[init_cut::10, 2], trainset[init_cut::10, 3], scale=100, width=0.002, color='r')
 ax.quiver(trainset[init_cut::10, 0], trainset[init_cut::10, 1],
           trainset[init_cut::10, 4], trainset[init_cut::10, 5], scale=100, width=0.002, color='b')
+ax.set_title("Training Set")
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
@@ -111,5 +112,6 @@ ax.quiver(testset[init_cut::10, 0], testset[init_cut::10, 1],
           testset[init_cut::10, 2], testset[init_cut::10, 3], scale=100, width=0.002, color='r')
 ax.quiver(testset[init_cut::10, 0], testset[init_cut::10, 1],
           testset[init_cut::10, 4], testset[init_cut::10, 5], scale=100, width=0.002, color='b')
+ax.set_title("Testing Set")
 
 plt.show()

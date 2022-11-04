@@ -11,6 +11,7 @@ import matplotlib.patches as patches
 from src.kernel_machine import KernelMachine
 from src.coupling_layer import CouplingLayer
 from src.feedforward import FeedForward
+from src.kernel_expansion import KernelExpansion
 from src.embedding import Embedding
 from src.parametrization import SPD, Diagonal, Fixed, Spherical
 from src.dynamics_second import DynamicsSecond
@@ -23,8 +24,8 @@ obstacle = sys.argv[2].lower() in ['true', '1', 't', 'y', 'yes',
                                    'load'] if len(sys.argv) > 2 else False
 
 # CPU/GPU setting
-use_cuda = torch.cuda.is_available()
-device = "cpu"  # torch.device("cuda" if use_cuda else "cpu")
+use_cuda = False  # torch.cuda.is_available()
+device = torch.device("cuda" if use_cuda else "cpu")
 
 # Data
 data = np.loadtxt(os.path.join('trainset', '{}.csv'.format(dataset)))
@@ -56,7 +57,8 @@ X_test = torch.from_numpy(
 
 # Function approximator
 # approximator = KernelMachine(dim, 1000, 1, length=0.4)
-approximator = FeedForward(dim, [64], 1)
+# approximator = FeedForward(dim, [64], 1)
+approximator = KernelExpansion(X[:, :dim])
 
 # Embedding
 embedding = Embedding(approximator)
@@ -137,7 +139,8 @@ train_embedding = ds.embedding(X[:, :dim]).cpu().detach().numpy()
 
 # Sampled Dynamics
 box_side = 0.03
-start_point = x_train[1005, :]
+# start_point = x_train[1005, :]
+start_point = x_train[0, :]
 # start_point = torch.tensor([-0.5, -0.66])
 a = [start_point[0] - box_side, start_point[1] - box_side]
 b = [start_point[0] + box_side, start_point[1] + box_side]
