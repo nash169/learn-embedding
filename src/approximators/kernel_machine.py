@@ -32,7 +32,7 @@ class KernelMachine(nn.Module):
         self.prediction_ = torch.nn.Linear(
             self.num_features_,  match_dim, bias=False)
 
-        # Init weights to zero (identity diffeomorphism)
+        # # Init weights to zero(identity diffeomorphism)
         # nn.init.zeros_(self.prediction_.weight.data)
 
     def fourier_features(self, x):

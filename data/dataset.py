@@ -5,10 +5,10 @@ import scipy.io as sio
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
-import torch
+# import torch
 
 from src.utils import linear_map
-from src.parametrization import Rotation
+# from src.parametrization import Rotation
 
 dataset = sys.argv[1] if len(sys.argv) > 1 else "Angle"
 num_trajs = int(sys.argv[2]) if len(sys.argv) > 2 else 1
@@ -79,8 +79,8 @@ testset = trajs[num_trajs][init_cut:, 1:]
 for i in range(num_trajs+1, len(trajs)):
     testset = np.append(testset, trajs[i][init_cut:, 1:], axis=0)
 
-np.savetxt('trainset/' + dataset + '.csv', trainset)
-np.savetxt('testset/' + dataset + '.csv', testset)
+np.savetxt('data/train/' + dataset + '.csv', trainset)
+np.savetxt('data/test/' + dataset + '.csv', testset)
 
 # fig = plt.figure()
 # ax = fig.add_subplot(111)

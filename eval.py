@@ -38,7 +38,7 @@ for dataset in li:
     rmse = []
     for n in range(reps):
         # Data
-        data = np.loadtxt(os.path.join('trainset', '{}.csv'.format(dataset)))
+        data = np.loadtxt(os.path.join('data/train', '{}.csv'.format(dataset)))
         dim = int(data.shape[1]/3)
         x_train = data[:, :dim]
 
@@ -140,7 +140,7 @@ for dataset in li:
         ax.set_xlabel('$y^1$')
         ax.set_ylabel('$y^2$')
         ax.set_zlabel('$y^3$')
-        fig.savefig('images/'+dataset+'_manifold.png', format='png')
+        fig.savefig('results/images/'+dataset+'_manifold.png', format='png')
         plt.close(fig)
 
         fig = plt.figure()
@@ -152,11 +152,11 @@ for dataset in li:
                    s=20, edgecolors='k', c='red')
         ax.scatter(x_train[-1, 0], x_train[-1, 1], s=100,
                    edgecolors='k', c='yellow', marker="*")
-        fig.savefig('images/'+dataset+'_field.png', format='png')
+        fig.savefig('results/images/'+dataset+'_field.png', format='png')
         plt.close(fig)
 
         # Testing
-        data = np.loadtxt(os.path.join('testset', '{}.csv'.format(dataset)))
+        data = np.loadtxt(os.path.join('data/test', '{}.csv'.format(dataset)))
         X = torch.from_numpy(
             data[:, :2*dim]).float().to(device).requires_grad_(True)
         Y = torch.from_numpy(
@@ -196,5 +196,5 @@ fig, ax = plt.subplots()
 green_diamond = dict(markerfacecolor='g', marker='D')
 ax.boxplot(data, flierprops=green_diamond)
 plt.xticks([1, 2, 3], ['RMSE', 'DTWD', 'CS'])
-fig.savefig('images/eval.png', format='png')
+fig.savefig('results/images/eval.png', format='png')
 plt.close(fig)

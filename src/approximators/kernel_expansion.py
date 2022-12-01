@@ -3,7 +3,7 @@
 import torch
 import torch.nn as nn
 
-from src.squared_exp import SquaredExp
+from src.kernels.squared_exp import SquaredExp
 
 
 class KernelExpansion(nn.Module):
@@ -12,7 +12,7 @@ class KernelExpansion(nn.Module):
 
         self.samples_ = samples
 
-        self.weights_ = nn.Parameter(torch.rand(
+        self.weights_ = nn.Parameter(0.1*torch.rand(
             samples.shape[0]), requires_grad=True)
 
         if kernel is not None:

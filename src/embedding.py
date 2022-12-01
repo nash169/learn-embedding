@@ -3,7 +3,7 @@
 import torch
 import torch.nn as nn
 
-from src.utils import squared_exp
+# from src.utils import squared_exp
 
 
 # Default ambient metric
@@ -21,14 +21,14 @@ class Embedding(nn.Module):
         # Default ambient metric
         self.metric = identity
 
-        # Default local obstacle deformation
-        self.deformation = lambda x, y: squared_exp(
-            x, y, sigma=0.05, eta=10)
+        # # Default local obstacle deformation
+        # self.deformation = lambda x, y: squared_exp(
+        #     x, y, sigma=0.05, eta=10)
 
     def forward(self, x):
         y = self.net_(x)
 
-        if hasattr(self, 'obstacles'):
+        if hasattr(self, 'obstacles') and hasattr(self, 'deformation'):
             y += torch.sum(self.deformation(x, self.obstacles),
                            axis=1).unsqueeze(1).to(x.device)
             # y += torch.sum(infty_exp(x, self.obstacles),
