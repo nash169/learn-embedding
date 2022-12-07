@@ -190,3 +190,16 @@ class SecondOrder(Dynamics):
             traj[i+1, :, :dim] = traj[i, :, :dim] + traj[i+1, :, dim:]*dt
 
         return traj
+
+    def integrate_geodesic(self, x, T, dt):
+        dim = int(x.shape[1]/2)
+        steps = int(T/dt)
+        traj = torch.zeros(steps, x.shape[0], x.shape[1])
+        traj[0, :, :] = x.requires_grad_(True)
+
+        for i in range(steps-1):
+            traj[i+1, :, dim:] = traj[i, :, dim:] + \
+                self.geodesic(traj[i, :, :])*dt
+            traj[i+1, :, :dim] = traj[i, :, :dim] + traj[i+1, :, dim:]*dt
+
+        return traj

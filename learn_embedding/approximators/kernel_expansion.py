@@ -3,7 +3,7 @@
 import torch
 import torch.nn as nn
 
-from src.kernels.squared_exp import SquaredExp
+from ..kernels.squared_exp import SquaredExp
 
 
 class KernelExpansion(nn.Module):

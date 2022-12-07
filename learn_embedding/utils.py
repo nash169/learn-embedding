@@ -6,10 +6,10 @@ import torch.nn as nn
 import numpy as np
 # import copy
 
-from src.dynamics import FirstOrder, SecondOrder
-from src.approximators import *
-from src.embedding import Embedding
-from src.covariances import *
+from .dynamics import FirstOrder, SecondOrder
+from .approximators import *
+from .embedding import Embedding
+from .covariances import *
 
 
 def fix_params(model):
@@ -18,12 +18,12 @@ def fix_params(model):
 
 
 def create_model(X, order="first"):
-    # Space dimension
-    dim = int(X.shape[1]/2)
-
     if order == "first":
+        # Space dimension
+        dim = int(X.shape[1])
+
         # Exact Kernel Expansion
-        approximator = KernelExpansion(X[:, :dim])
+        approximator = KernelExpansion(X)
 
         # Approximated Kernel Expansion
         # approximator = KernelMachine(dim, 1000, 1, length=0.4)
@@ -39,11 +39,14 @@ def create_model(X, order="first"):
         stiffness = SPD(dim)
 
         # Attractor
-        attractor = X[-1, :dim]
+        attractor = X[-1, :]
 
         return FirstOrder(embedding, stiffness, attractor).to(X.device)
 
     elif order == "second":
+        # Space dimension
+        dim = int(X.shape[1]/2)
+
         # Exact Kernel Expansion
         # approximator = KernelExpansion(X[:, :dim])
 
@@ -76,6 +79,9 @@ def create_model(X, order="first"):
         return SecondOrder(embedding, stiffness, attractor, dissipation, velocity).to(X.device)
 
     elif order == "first_flat":
+        # Space dimension
+        dim = int(X.shape[1])
+
         # Neural Network
         approximator = FeedForward(dim, [64], 1)
 
@@ -88,11 +94,14 @@ def create_model(X, order="first"):
         stiffness = Spherical(False)
 
         # Attractor
-        attractor = X[-1, :dim]
+        attractor = X[-1, :]
 
         return FirstOrder(embedding, stiffness, attractor).to(X.device)
 
     elif order == "second_flat":
+        # Space dimension
+        dim = int(X.shape[1]/2)
+
         # Neural Network
         approximator = FeedForward(dim, [64], 1)
 

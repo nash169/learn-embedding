@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import sys
 # import torch
 
-from src.utils import linear_map
+from learn_embedding.utils import linear_map
 # from src.parametrization import Rotation
 
 dataset = sys.argv[1] if len(sys.argv) > 1 else "Angle"

@@ -5,8 +5,8 @@ import sys
 import numpy as np
 import torch
 
-from src.utils import create_model
-from src.trainer import Trainer
+from learn_embedding.utils import create_model
+from learn_embedding.trainer import Trainer
 
 
 # User input
@@ -19,24 +19,18 @@ use_cuda = torch.cuda.is_available()
 device = torch.device("cuda" if use_cuda else "cpu")
 
 # Data
-data = np.loadtxt(os.path.join('data/train', '{}.csv'.format(dataset)))
+data = np.loadtxt(os.path.join('data/trainset', '{}.csv'.format(dataset)))
 dim = int(data.shape[1]/3)
 
 # State (pos,vel)
-X = torch.from_numpy(data[:, :2*dim]).float().to(device)
-
-# Output (acc)
-Y = torch.from_numpy(data[:, 2*dim:]).float().to(device)
+X = torch.from_numpy(data[:, :dim]).float().to(device)
+Y = torch.from_numpy(data[:, dim:2*dim]).float().to(device)
 
 # Model
-order = "first"
-model = create_model(X, order)
+model = create_model(X, "first")
 
 # Trainer
-if order == "first":
-    trainer = Trainer(model, X[:, :dim], X[:, dim:])
-elif order == "second":
-    trainer = Trainer(model, X, Y)
+trainer = Trainer(model, X, Y)
 
 # Set trainer optimizer (this is not very clean)
 trainer.optimizer = torch.optim.Adam(

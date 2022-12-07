@@ -78,6 +78,17 @@ class Embedding(nn.Module):
 
         return 0.5 * (torch.einsum('bqm,bmji->bqji', im, dm + dm.permute(0, 1, 3, 2)) - torch.einsum('bqm,bijm->bqij', im, dm))
 
+    def coriolis(self, x, v, m):
+        dm = torch.empty(m.size(0), m.size(
+            1), m.size(2), x.size(1)).to(x.device)
+
+        for i in range(m.size(1)):
+            for j in range(m.size(2)):
+                dm[:, i, j, :] = torch.autograd.grad(
+                    m[:, i, j], x, grad_outputs=torch.ones_like(m[:, i, j]), create_graph=True)[0]
+
+        return torch.einsum('bijk,bk->bij', dm + dm.permute(0, 1, 3, 2) - dm.permute(0, 3, 2, 1), v)
+
     def init_weights(self, m):
         if isinstance(m, nn.Linear):
             nn.init.normal_(m.weight, mean=0.0, std=0.0)
