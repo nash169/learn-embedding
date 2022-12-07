@@ -42,8 +42,8 @@ X_test = torch.cat((torch.ravel(x_m).unsqueeze(-1),
                     torch.ravel(y_m).unsqueeze(-1), torch.zeros((resolution**2, dim))), dim=1).requires_grad_(True)
 
 # Model
-load = True
-order = "first"
+load = False
+order = "second_flat"
 ds = create_model(X, order)
 if load:
     ds.load_state_dict(torch.load(os.path.join(
@@ -91,15 +91,15 @@ train_embedding = ds.embedding(X[:, :dim]).cpu().detach().numpy()
 
 # Sampled Dynamics
 box_side = 0.03
-start_point = x_train[1005, :]
+# start_point = x_train[1005, :]
 # start_point = x_train[0, :]
-# start_point = torch.tensor([-0.5, -0.66])
+start_point = torch.tensor([-0.2, -0.4])
 a = [start_point[0] - box_side, start_point[1] - box_side]
 b = [start_point[0] + box_side, start_point[1] + box_side]
 
 T = 20
 dt = 0.01
-num_samples = 3
+num_samples = 1
 init_state = torch.cat((torch.FloatTensor(num_samples, 1).uniform_(
     a[0], b[0]), torch.FloatTensor(num_samples, 1).uniform_(a[1], b[1]), torch.zeros((num_samples, dim))), dim=1)
 samples = ds.integrate(init_state, T, dt)
@@ -205,8 +205,8 @@ ellipses = torch.cat(((L[:, 0].unsqueeze(-1)*theta.cos()).unsqueeze(-1),
 ellipses = torch.bmm(V, ellipses.permute(0, 2, 1)).permute(0, 2, 1)
 
 detM = detM.reshape(resolution, -1).detach().numpy()
-detM -= np.min(detM)
-detM /= np.max(detM)
+# detM -= np.min(detM)
+# detM /= np.max(detM)
 colors = plt.cm.jet(detM)
 mappable = plt.cm.ScalarMappable(cmap=plt.cm.jet)
 mappable.set_array(detM)
@@ -217,10 +217,10 @@ ax.contourf(x_m.detach().numpy(), y_m.detach().numpy(), detM, 500, cmap="jet")
 fig.colorbar(mappable,  ax=ax, label=r"$det(g)$")
 ax.scatter(x_e, y_e, color="k", s=0.1)
 xy_e = xy_e.detach().numpy()
-# ellipses = 1e-3*ellipses.detach().numpy()
-# for i in range(1):
-#     ax.plot(xy_e[i, 0] + ellipses[i, :, 0],
-#             xy_e[i, 1] + ellipses[i, :, 1], color="k", linewidth=0.5)
+ellipses = 1e-2*ellipses.detach().numpy()
+for i in range(ellipses.shape[0]):
+    ax.plot(xy_e[i, 0] + ellipses[i, :, 0],
+            xy_e[i, 1] + ellipses[i, :, 1], color="k", linewidth=0.5)
 # ax.contour(x, y, detM, 10, cmap=None, colors='#f2e68f')
 ax.axis("equal")
 
