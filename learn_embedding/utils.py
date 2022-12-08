@@ -127,8 +127,9 @@ def create_model(X, order="first"):
         velocity.embedding.apply(velocity.embedding.init_weights)
         velocity.stiffness.spherical = (torch.tensor(0.1), False)
         fix_params(velocity)  # copy.deepcopy(stiffness)
+        velocity = lambda x : 0.1*(attractor - x)
 
-        return SecondOrder(embedding, stiffness, attractor, dissipation).to(X.device)
+        return SecondOrder(embedding, stiffness, attractor, dissipation, velocity).to(X.device)
 
     else:
         print("Case not found.")

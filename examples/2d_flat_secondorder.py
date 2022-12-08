@@ -67,13 +67,14 @@ start_point = torch.tensor([-0.9, -0.9])
 a = [start_point[0] - box_side, start_point[1] - box_side]
 b = [start_point[0] + box_side, start_point[1] + box_side]
 
-T = 1.5
-dt = 0.001
+T = 3
+dt = 0.005
 num_samples = 1
 init_state = torch.tensor([[-0.9, -0.85, 1, 1]])
 # init_state = torch.cat((torch.FloatTensor(num_samples, 1).uniform_(
 #     a[0], b[0]), torch.FloatTensor(num_samples, 1).uniform_(a[1], b[1]), torch.ones((num_samples, dim))), dim=1)
 samples = ds.integrate_geodesic(init_state, T, dt)
+samples2 = ds.integrate(init_state, T + 5, dt)
 
 # Vector Field
 field = dt * ds(X).reshape(resolution, -1, dim)
@@ -134,9 +135,9 @@ for i in range(ellipses_samples.shape[0]):
 
 
 # Christoffel symbols
-# C_samples = ds.embedding.christoffel(X_samples, M_samples)
-# Cv_samples = torch.einsum('bqij,bi->bqj', C_samples, Vel_samples)
-Cv_samples = ds.embedding.coriolis(X_samples, Vel_samples, M_samples)
+C_samples = ds.embedding.christoffel(X_samples, M_samples)
+Cv_samples = torch.bmm(M_samples,torch.einsum('bqij,bi->bqj', C_samples, Vel_samples))
+# Cv_samples = ds.embedding.coriolis(X_samples, Vel_samples, M_samples)
 L_christoffel, V_christoffel = torch.linalg.eig(Cv_samples)
 L_christoffel = torch.real(L_christoffel)
 V_christoffel = torch.real(V_christoffel)
@@ -197,8 +198,8 @@ with torch.no_grad():
     ax = fig.add_subplot(233)
     fig.colorbar(mappable,  ax=ax, label=r"$\phi$")
     for i in range(num_samples):
-        ax.plot(samples[:, i, 0],
-                samples[:, i, 1], color='k')
+        ax.plot(samples[:, i, 0],samples[:, i, 1], color='k')
+        ax.plot(samples2[:, i, 0],samples2[:, i, 1], color='r')
     ax.streamplot(x.numpy(), y.numpy(), field[:, :, 0], field[:, :, 1],
                   color=potential.numpy(), cmap="jet")
     if obstacle is not None:
@@ -210,25 +211,6 @@ with torch.no_grad():
     ax.set_xlabel('$x^1$')
     ax.set_ylabel('$x^2$')
     ax.set_title('Vector Field')
-
-    # Sampled trajectory + metric ellipses
-    ax = fig.add_subplot(235)
-    fig.colorbar(mappable,  ax=ax, label=r"$\phi$")
-    for i in range(num_samples):
-        ax.plot(samples.detach().numpy()[:, i, 0],
-                samples.detach().numpy()[:, i, 1], color='k')
-    ax.scatter(X_samples[:, 0], X_samples[:, 1], color="k", s=10)
-    for i in range(ellipses_samples.shape[0]):
-        ax.plot(X_samples[i, 0] + ellipses_samples[i, :, 0],
-                X_samples[i, 1] + ellipses_samples[i, :, 1], color="k", linewidth=0.5)
-
-    rect = patches.Rectangle((start_point[0] - box_side, start_point[1] - box_side),
-                             2*box_side, 2*box_side, linewidth=1, edgecolor='k', facecolor='none')
-    ax.add_patch(rect)
-    ax.axis('square')
-    ax.set_xlabel('$x^1$')
-    ax.set_ylabel('$x^2$')
-    ax.set_title('Sampled Trajectory with Metric Ellipses')
 
     # Metric Determinant
     ax = fig.add_subplot(234)
@@ -245,20 +227,39 @@ with torch.no_grad():
     ax.axis('square')
     ax.set_title('Metric Determinant')
 
+    # Sampled trajectory + metric ellipses
+    ax = fig.add_subplot(235)
+    fig.colorbar(mappable,  ax=ax, label=r"$\phi$")
+    for i in range(num_samples):
+        ax.plot(samples[:, i, 0],samples[:, i, 1], color='k')
+        ax.plot(samples2[:, i, 0],samples2[:, i, 1], color='r')
+    ax.scatter(X_samples[:, 0], X_samples[:, 1], color="k", s=10)
+    for i in range(ellipses_samples.shape[0]):
+        ax.plot(X_samples[i, 0] + ellipses_samples[i, :, 0],
+                X_samples[i, 1] + ellipses_samples[i, :, 1], color="k", linewidth=0.5)
+
+    # rect = patches.Rectangle((start_point[0] - box_side, start_point[1] - box_side),
+    #                          2*box_side, 2*box_side, linewidth=1, edgecolor='k', facecolor='none')
+    # ax.add_patch(rect)
+    ax.axis('square')
+    ax.set_xlabel('$x^1$')
+    ax.set_ylabel('$x^2$')
+    ax.set_title('Sampled Trajectory with Metric Ellipses')
+
     # Sampled trajectory + christoffel ellipses
     ax = fig.add_subplot(236)
     fig.colorbar(mappable,  ax=ax, label=r"$\phi$")
     for i in range(num_samples):
-        ax.plot(samples.detach().numpy()[:, i, 0],
-                samples.detach().numpy()[:, i, 1], color='k')
+        ax.plot(samples[:, i, 0],samples[:, i, 1], color='k')
+        ax.plot(samples2[:, i, 0],samples2[:, i, 1], color='r')
     ax.scatter(X_samples[:, 0], X_samples[:, 1], color="k", s=10)
     for i in range(ellipses_christoffel.shape[0]):
         ax.plot(X_samples[i, 0] + ellipses_christoffel[i, :, 0],
                 X_samples[i, 1] + ellipses_christoffel[i, :, 1], color="k", linewidth=0.5)
 
-    rect = patches.Rectangle((start_point[0] - box_side, start_point[1] - box_side),
-                             2*box_side, 2*box_side, linewidth=1, edgecolor='k', facecolor='none')
-    ax.add_patch(rect)
+    # rect = patches.Rectangle((start_point[0] - box_side, start_point[1] - box_side),
+    #                          2*box_side, 2*box_side, linewidth=1, edgecolor='k', facecolor='none')
+    # ax.add_patch(rect)
     ax.axis('square')
     ax.set_xlabel('$x^1$')
     ax.set_ylabel('$x^2$')
