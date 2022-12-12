@@ -104,7 +104,7 @@ Vel_samples = samples[::step, 0, dim:]
 Z_samples = ds.embedding(X_samples)
 dZ_samples = ds.embedding.jacobian(X_samples, Z_samples)
 M_samples = ds.embedding.pullmetric(Z_samples, dZ_samples)
-L_samples, V_samples = torch.linalg.eig(M_samples)
+L_samples, V_samples = torch.linalg.eig(M_samples.inverse())
 L_samples = torch.real(L_samples)
 V_samples = torch.real(V_samples)
 
@@ -136,8 +136,8 @@ for i in range(ellipses_samples.shape[0]):
 
 # Christoffel symbols
 C_samples = ds.embedding.christoffel(X_samples, M_samples)
-Cv_samples = torch.bmm(M_samples,torch.einsum('bqij,bi->bqj', C_samples, Vel_samples))
-# Cv_samples = ds.embedding.coriolis(X_samples, Vel_samples, M_samples)
+Cv_samples = torch.einsum('bqij,bi->bqj', C_samples, Vel_samples)
+# Cv2_samples = ds.embedding.coriolis(X_samples, Vel_samples, M_samples)
 L_christoffel, V_christoffel = torch.linalg.eig(Cv_samples)
 L_christoffel = torch.real(L_christoffel)
 V_christoffel = torch.real(V_christoffel)
@@ -198,8 +198,8 @@ with torch.no_grad():
     ax = fig.add_subplot(233)
     fig.colorbar(mappable,  ax=ax, label=r"$\phi$")
     for i in range(num_samples):
-        ax.plot(samples[:, i, 0],samples[:, i, 1], color='k')
-        ax.plot(samples2[:, i, 0],samples2[:, i, 1], color='r')
+        ax.plot(samples[:, i, 0], samples[:, i, 1], color='k')
+        ax.plot(samples2[:, i, 0], samples2[:, i, 1], color='r')
     ax.streamplot(x.numpy(), y.numpy(), field[:, :, 0], field[:, :, 1],
                   color=potential.numpy(), cmap="jet")
     if obstacle is not None:
@@ -231,8 +231,8 @@ with torch.no_grad():
     ax = fig.add_subplot(235)
     fig.colorbar(mappable,  ax=ax, label=r"$\phi$")
     for i in range(num_samples):
-        ax.plot(samples[:, i, 0],samples[:, i, 1], color='k')
-        ax.plot(samples2[:, i, 0],samples2[:, i, 1], color='r')
+        ax.plot(samples[:, i, 0], samples[:, i, 1], color='k')
+        ax.plot(samples2[:, i, 0], samples2[:, i, 1], color='r')
     ax.scatter(X_samples[:, 0], X_samples[:, 1], color="k", s=10)
     for i in range(ellipses_samples.shape[0]):
         ax.plot(X_samples[i, 0] + ellipses_samples[i, :, 0],
@@ -250,8 +250,8 @@ with torch.no_grad():
     ax = fig.add_subplot(236)
     fig.colorbar(mappable,  ax=ax, label=r"$\phi$")
     for i in range(num_samples):
-        ax.plot(samples[:, i, 0],samples[:, i, 1], color='k')
-        ax.plot(samples2[:, i, 0],samples2[:, i, 1], color='r')
+        ax.plot(samples[:, i, 0], samples[:, i, 1], color='k')
+        ax.plot(samples2[:, i, 0], samples2[:, i, 1], color='r')
     ax.scatter(X_samples[:, 0], X_samples[:, 1], color="k", s=10)
     for i in range(ellipses_christoffel.shape[0]):
         ax.plot(X_samples[i, 0] + ellipses_christoffel[i, :, 0],
