@@ -1,20 +1,20 @@
 #!/usr/bin/env python
 
-import setuptools
+from setuptools import setup, find_namespace_packages
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-setuptools.setup(
+setup(
     name="learn-embedding",
     version="1.0.0",
     author="Bernardo Fichera",
     author_email="bernardo.fichera@gmail.com",
-    description="Non-linear dynamical system higher dimension space deformation.",
+    description="Non-linear dynamical system learning via higher dimension space deformation.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/nash169/learn-embedding.git",
-    packages=setuptools.find_packages(),
+    packages=find_namespace_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU GENERAL PUBLIC LICENSE",
@@ -35,4 +35,7 @@ setuptools.setup(
             "pylint",           # python linter
         ]
     },
+    package_data={
+        "learn_embedding.data": ["*.mat", "*.csv"],
+    }
 )
