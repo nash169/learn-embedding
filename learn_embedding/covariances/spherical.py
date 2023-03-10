@@ -5,19 +5,20 @@ import torch.nn as nn
 
 
 class Spherical(nn.Module):
-    def __init__(self, grad=True):
+    def __init__(self, eval=1, grad=True):
         super(Spherical, self).__init__()
 
-        self.spherical_ = nn.Parameter(torch.rand(1), requires_grad=grad)
+        # self.eval = eval
+        self._eval = nn.Parameter(torch.tensor(eval).log(), requires_grad=grad)
 
     def forward(self, x):
-        return nn.functional.linear(x, self.spherical_.exp()*torch.eye(x.shape[1]).to(x.device))
+        return self.eval * x
 
     # Params
     @property
-    def spherical(self):
-        return self.spherical_
+    def eval(self):
+        return self._eval.exp()
 
-    @spherical.setter
-    def spherical(self, value):
-        self.spherical_ = nn.Parameter(value[0], requires_grad=value[1])
+    @eval.setter
+    def eval(self, value):
+        self._eval = nn.Parameter(torch.tensor(value).log(), requires_grad=True)
