@@ -34,13 +34,16 @@ class SecondGeometry(nn.Module):
         if field is not None:
             self.field = field
 
+        # Velocity Dependent Embedding
+        self._velocity_embedding = False
+
     # Forward Dynamics
     def forward(self, x):
         # data
         pos = x[:, :int(x.shape[1]/2)]
         vel = x[:, int(x.shape[1]/2):]
         # embedding
-        y = self.embedding(pos)
+        y = self.embedding(pos, vel) if self.velocity_embedding else self.embedding(pos)
         # jacobian
         j = self.embedding.jacobian(pos, y)
         # metric
@@ -84,3 +87,12 @@ class SecondGeometry(nn.Module):
     @attractor.setter
     def attractor(self, value: torch.Tensor):
         self._attractor = value
+
+    # Attractor setter/getter
+    @property
+    def velocity_embedding(self) -> torch.Tensor:
+        return self._velocity_embedding
+
+    @velocity_embedding.setter
+    def velocity_embedding(self, value: torch.Tensor):
+        self._velocity_embedding = value

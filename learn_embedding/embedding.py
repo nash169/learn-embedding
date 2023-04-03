@@ -21,11 +21,11 @@ class Embedding(nn.Module):
         # Default ambient metric
         self.metric = identity
 
-    def forward(self, x):
+    def forward(self, x, v=None):
         y = self.net_(x)
 
         if hasattr(self, 'local_deformation'):
-            y += self.local_deformation(x)
+            y += self.local_deformation(x, v)
 
         y[y >= 100] = 100
 
