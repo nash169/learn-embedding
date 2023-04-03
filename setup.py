@@ -36,6 +36,7 @@ setup(
         ]
     },
     package_data={
-        "learn_embedding.data": ["*.mat", "*.csv"],
+        "learn_embedding.data.lasahandwriting": ["*.mat", "*.csv", "*.pkl"],
+        "learn_embedding.data.roboticdemos": ["*.mat", "*.csv", "*.pkl"],
     }
 )

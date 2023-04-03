@@ -11,7 +11,8 @@ class TorchHelper():
 
     @staticmethod
     def load(model, path):
-        model.load_state_dict(torch.load(os.path.join('', '{}.pt'.format(path)), map_location=torch.device(model.device)))
+        # model.load_state_dict(torch.load(os.path.join('', '{}.pt'.format(path)), map_location=torch.device(model.device)))
+        model.load_state_dict(torch.load(os.path.join('', '{}.pt'.format(path))))
         model.eval()
 
     @staticmethod
