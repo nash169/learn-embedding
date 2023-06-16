@@ -2,6 +2,6 @@
 
 from .spherical import Spherical
 from .diagonal import Diagonal
-from .full import SPD, SymmetricPositive
+from .full import SPD, SymmetricPositiveDefinite
 
-__all__ = ["Spherical", "Diagonal", "SPD", "SymmetricPositive"]
+__all__ = ["Spherical", "Diagonal", "SPD", "SymmetricPositiveDefinite"]

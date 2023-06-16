@@ -50,10 +50,10 @@ class MatrixExponential(nn.Module):
         return torch.matrix_exp(X)
 
 
-class SymmetricPositive(nn.Module):
+class SymmetricPositiveDefinite(nn.Module):
     def __init__(self, in_features):
 
-        super(SPD, self).__init__()
+        super(SymmetricPositiveDefinite, self).__init__()
 
         self.spd_ = nn.Linear(in_features, in_features, bias=False)
         P.register_parametrization(self.spd_, "weight", Symmetric())

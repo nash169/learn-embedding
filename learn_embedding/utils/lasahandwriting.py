@@ -56,22 +56,22 @@ class LasaHandwriting():
                 test_y = np.append(test_y, self.acc[i], axis=0)
 
             if visualize:
-                fig = plt.figure(figsize=(15, 5))
+                fig = plt.figure()
                 ax = [fig.add_subplot(131), fig.add_subplot(132), fig.add_subplot(133)]
                 ax[0].scatter(train_x[:, 0], train_x[:, 1], s=20, c='r')
                 ax[1].scatter(train_x[:, 2], train_x[:, 3], s=20, c='g')
                 ax[2].scatter(train_y[:, 0], train_y[:, 1], s=20, c='b')
-                ax[0].axis('equal')
-                ax[1].axis('equal')
-                ax[2].axis('equal')
-                fig = plt.figure(figsize=(15, 5))
+                # ax[0].axis('equal')
+                # ax[1].axis('equal')
+                # ax[2].axis('equal')
+                fig = plt.figure()
                 ax = [fig.add_subplot(131), fig.add_subplot(132), fig.add_subplot(133)]
                 ax[0].scatter(test_x[:, 0], test_x[:, 1], s=20, c='r')
                 ax[1].scatter(test_x[:, 2], test_x[:, 3], s=20, c='g')
                 ax[2].scatter(test_y[:, 0], test_y[:, 1], s=20, c='b')
-                ax[0].axis('equal')
-                ax[1].axis('equal')
-                ax[2].axis('equal')
+                # ax[0].axis('equal')
+                # ax[1].axis('equal')
+                # ax[2].axis('equal')
         else:
             train_x = self.pos[0]
             train_y = self.vel[0]

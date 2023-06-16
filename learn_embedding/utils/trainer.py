@@ -76,6 +76,10 @@ class Trainer:
         if self.options_["record_loss"]:
             loss_log = np.empty([1, 3])
 
+        # Scheduler
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=100, threshold=1e-2,
+                                                               threshold_mode='rel', cooldown=0, min_lr=0, eps=1e-8, verbose=False)
+
         # start training
         for epoch in range(self.options_['epochs']):
             for iter, (batch_x, batch_y) in enumerate(loader):  # for each training step
@@ -90,8 +94,7 @@ class Trainer:
 
                 # Print loss
                 if self.options_["print_loss"]:
-                    print("EPOCH: ", epoch, "ITER: ",
-                          iter, "LOSS: ", loss.item())
+                    print("EPOCH: ", epoch, "ITER: ", iter, "LR: ", self.optimizer.param_groups[0]['lr'],  "LOSS: ", loss.item())
 
                 # Record loss (EPOCH,ITER,LOSS)
                 if self.options_["record_loss"]:
@@ -112,6 +115,9 @@ class Trainer:
 
                 # apply gradients
                 self.optimizer.step()
+
+                # step scheduler
+                scheduler.step(loss)
 
         # Close file
         if self.options_["record_loss"]:

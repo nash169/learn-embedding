@@ -9,7 +9,7 @@ class Integrator():
         dim = x0.shape[1]
         steps = int(T/dt)
         x = torch.zeros(steps, x0.shape[0], 2*x0.shape[1]).to(x0.device)
-        x[0, :, :] = torch.cat((x0, torch.zeros(1, dim).to(x0.device)), axis=1)
+        x[0, :, :] = torch.cat((x0, torch.zeros(x0.shape[0], dim).to(x0.device)), axis=1)
 
         for i in range(steps-1):
             x[i, :, dim:] = dynamics(x[i, :, :dim])

@@ -9,7 +9,7 @@ from ..covariances.spherical import Spherical
 
 
 class SecondGeometry(nn.Module):
-    def __init__(self, embedding, attractor, stiffness: Optional[nn.Module] = None,  dissipation: Optional[nn.Module] = None, field: Optional[nn.Module] = None):
+    def __init__(self, embedding, attractor, stiffness: Optional[nn.Module] = None,  dissipation: Optional[nn.Module] = None, field: Optional[nn.Module] = None, field_weight: Optional[float] = 1.0):
         super(SecondGeometry, self).__init__()
 
         # Embedding
@@ -33,6 +33,7 @@ class SecondGeometry(nn.Module):
         # Reference velocity field
         if field is not None:
             self.field = field
+            self.field_weight = field_weight
 
         # Velocity Dependent Embedding
         self._velocity_embedding = False
@@ -52,7 +53,7 @@ class SecondGeometry(nn.Module):
         g = self.embedding.christoffel(pos, m)
         # desired state
         xd = pos - self.attractor
-        vd = vel - self.field(pos) if hasattr(self, 'field') else vel
+        vd = vel - self.field_weight*self.field(pos) if hasattr(self, 'field') else vel
 
         return (torch.bmm(m.inverse(), -(self.dissipation(vd)+self.stiffness(xd)).unsqueeze(2))
                 - torch.bmm(torch.einsum('bqij,bi->bqj', g, vd), vd.unsqueeze(2))).squeeze(2)

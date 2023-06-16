@@ -60,6 +60,32 @@ class DataProcess():
         p = savgol_filter(x, window_length, order, axis=0, **kwargs)
         return p
 
+    @staticmethod
+    def subsample(x, num_samples):
+        # Calculate total length of the trajectory
+        total_length = np.sum(np.linalg.norm(x[1:] - x[:-1], axis=1))
+
+        # Calculate average distance between consecutive samples
+        average_distance = total_length / (num_samples - 1)
+
+        # Add the first point to the subsampled trajectory
+        idx = [0]
+
+        # Iterate over the remaining points in the trajectory
+        for j in range(1, x.shape[0]):
+            # Calculate the distance to the previously added point
+            distance = np.linalg.norm(x[j] - x[idx[-1]])
+
+            # If the distance is greater than or equal to the average distance, add the point to the subsampled trajectory
+            if distance >= average_distance:
+                idx.append(j)
+
+        # Add last point
+        if x.shape[0] - 1 not in idx:
+            idx = np.append(idx, x.shape[0] - 1)
+
+        return np.array(idx)
+
     # @property
     # def time(self):
     #     return self._time
