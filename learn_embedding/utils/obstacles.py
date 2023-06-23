@@ -41,7 +41,7 @@ class KernelDeformation(nn.Module):
     def forward(self, x, v=None):
         if v is not None:
             dist = x - self.samples.unsqueeze(1)
-            alphas = (torch.einsum('kij,ij->ki', dist.div(torch.linalg.norm(dist, dim=2).view(-1, 1)), v) < self.tol)*self.weights.view(-1, 1)
+            alphas = (torch.einsum('kij,ij->ki', dist.div(torch.linalg.norm(dist, dim=2).unsqueeze(-1)), v.div(v.norm(dim=1).unsqueeze(-1))) < self.tol)*self.weights.view(-1, 1)
             return torch.sum(self.kernel(self._samples, x)*alphas, axis=0).view(-1, 1)
         else:
             return torch.mv(self.kernel(self._samples, x).T, self.weights).unsqueeze(1)
