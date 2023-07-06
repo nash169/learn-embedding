@@ -74,7 +74,7 @@ class Trainer:
 
         # Open file
         if self.options_["record_loss"]:
-            loss_log = np.empty([1, 3])
+            loss_log = np.empty((0, 3))
 
         # Scheduler
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=100, threshold=1e-2,
@@ -117,15 +117,11 @@ class Trainer:
                 self.optimizer.step()
 
                 # step scheduler
-                scheduler.step(loss)
+                # scheduler.step(loss)
 
         # Close file
         if self.options_["record_loss"]:
-            if not os.path.exists('models'):
-                os.makedirs('models')
-
-            np.savetxt(os.path.join('models', '{}.csv'.format(
-                self.options_["record_loss"])), loss_log)
+            return loss_log
 
     # Model
     @property
