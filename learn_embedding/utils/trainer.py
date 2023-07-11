@@ -77,7 +77,7 @@ class Trainer:
             loss_log = np.empty((0, 3))
 
         # Scheduler
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=100, threshold=1e-2,
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=0.5, patience=100, threshold=1e-2,
                                                                threshold_mode='rel', cooldown=0, min_lr=0, eps=1e-8, verbose=False)
 
         # start training
@@ -117,7 +117,7 @@ class Trainer:
                 self.optimizer.step()
 
                 # step scheduler
-                # scheduler.step(loss)
+                scheduler.step(loss)
 
         # Close file
         if self.options_["record_loss"]:
