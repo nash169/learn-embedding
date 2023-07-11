@@ -56,7 +56,7 @@ class SecondGeometry(nn.Module):
         vd = vel - self.field_weight*self.field(pos) if hasattr(self, 'field') else vel
 
         return (torch.bmm(m.inverse(), -(self.dissipation(vd)+self.stiffness(xd)).unsqueeze(2))
-                - torch.bmm(torch.einsum('bqij,bi->bqj', g, vd), vd.unsqueeze(2))).squeeze(2)
+                - torch.bmm(torch.einsum('bqij,bi->bqj', g, vel), vel.unsqueeze(2))).squeeze(2)
 
     def geodesic(self, x):
         # data
