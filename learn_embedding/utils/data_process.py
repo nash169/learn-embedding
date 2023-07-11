@@ -76,6 +76,11 @@ class DataProcess():
             # Calculate the distance to the previously added point
             distance = np.linalg.norm(x[j] - x[idx[-1]])
 
+            # Increase the sampling towards the end of the trajectory
+            # if np.sum(np.linalg.norm(x[idx[1:]] - x[idx[:-1]], axis=1)) >= total_length*2/3:
+            if len(idx) >= num_samples*4/5:
+                average_distance = total_length / (5*num_samples - 1)
+
             # If the distance is greater than or equal to the average distance, add the point to the subsampled trajectory
             if distance >= average_distance:
                 idx.append(j)
