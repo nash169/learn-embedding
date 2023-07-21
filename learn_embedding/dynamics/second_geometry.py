@@ -54,8 +54,15 @@ class SecondGeometry(nn.Module):
         # desired state
         xd = pos - self.attractor
         vd = vel - self.field_weight*self.field(pos) if hasattr(self, 'field') else vel
+        # dynamics harmonic components
+        if hasattr(self.embedding, 'local_deformation'):
+            harmonic_weight = torch.ones(x.shape[0], 1).to(x.device)
+            harmonic_weight[self.embedding.local_deformation(pos, vel) >= 0.0] = 0.0
+            # print(harmonic_weight)
 
-        return (torch.bmm(m.inverse(), -(self.dissipation(vd)+self.stiffness(xd)).unsqueeze(2))
+        harmonic_weight = 0.0
+
+        return (torch.bmm(m.inverse(), -(harmonic_weight*self.dissipation(vd)+harmonic_weight*self.stiffness(xd)).unsqueeze(2))
                 - torch.bmm(torch.einsum('bqij,bi->bqj', g, vel), vel.unsqueeze(2))).squeeze(2)
 
     def geodesic(self, x):
