@@ -60,7 +60,7 @@ class SecondGeometry(nn.Module):
             harmonic_weight[self.embedding.local_deformation(pos, vel) >= 0.0] = 0.0
             # print(harmonic_weight)
 
-        harmonic_weight = 0.0
+        harmonic_weight = 1.0
 
         return (torch.bmm(m.inverse(), -(harmonic_weight*self.dissipation(vd)+harmonic_weight*self.stiffness(xd)).unsqueeze(2))
                 - torch.bmm(torch.einsum('bqij,bi->bqj', g, vel), vel.unsqueeze(2))).squeeze(2)
