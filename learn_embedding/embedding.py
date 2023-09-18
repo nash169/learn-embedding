@@ -13,16 +13,22 @@ def identity(y):
 
 
 class Embedding(nn.Module):
-    def __init__(self, approximator):
+    def __init__(self, approximator, bump=None):
         super(Embedding, self).__init__()
 
         self.net_ = approximator
+
+        if bump is not None:
+            self.bump = bump
 
         # Default ambient metric
         self.metric = identity
 
     def forward(self, x, v=None):
         y = self.net_(x)
+
+        if hasattr(self, 'bump'):
+            y *= self.bump(x.contiguous()).unsqueeze(-1)
 
         if hasattr(self, 'local_deformation'):
             y += self.local_deformation(x, v)
