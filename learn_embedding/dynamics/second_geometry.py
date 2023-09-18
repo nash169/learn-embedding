@@ -57,10 +57,11 @@ class SecondGeometry(nn.Module):
         # dynamics harmonic components
         if hasattr(self.embedding, 'local_deformation'):
             harmonic_weight = torch.ones(x.shape[0], 1).to(x.device)
-            harmonic_weight[self.embedding.local_deformation(pos, vel) >= 0.0] = 0.0
+            harmonic_weight[self.embedding.local_deformation(pos, vel) >= 0.01] = 0.0
+            # harmonic_weight[self.embedding.local_deformation(pos) >= 0.01] = 0.0
             # print(harmonic_weight)
 
-        harmonic_weight = 1.0
+        # harmonic_weight = 0.0
 
         return (torch.bmm(m.inverse(), -(harmonic_weight*self.dissipation(vd)+harmonic_weight*self.stiffness(xd)).unsqueeze(2))
                 - torch.bmm(torch.einsum('bqij,bi->bqj', g, vel), vel.unsqueeze(2))).squeeze(2)
@@ -71,6 +72,7 @@ class SecondGeometry(nn.Module):
         vel = x[:, int(x.shape[1]/2):]
         # embedding
         y = self.embedding(pos)
+        # y = self.embedding(pos, vel) if self.velocity_embedding else self.embedding(pos)
         # jacobian
         j = self.embedding.jacobian(pos, y)
         # metric
@@ -78,9 +80,9 @@ class SecondGeometry(nn.Module):
         # christoffel
         g = self.embedding.christoffel(pos, m)
         # desired state
-        vd = vel - self.field(pos) if hasattr(self, 'field') else vel
+        # vd = vel - self.field(pos) if hasattr(self, 'field') else vel
 
-        return -torch.bmm(torch.einsum('bqij,bi->bqj', g, vd), vd.unsqueeze(2)).squeeze(2)
+        return -torch.bmm(torch.einsum('bqij,bi->bqj', g, vel), vel.unsqueeze(2)).squeeze(2)
 
     # Potential function
     def potential(self, x):
