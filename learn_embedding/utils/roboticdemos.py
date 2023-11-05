@@ -16,7 +16,7 @@ class RoboticDemos():
         self.pos = [demo['ee_pose'][:, :3] for demo in data]
         self.vel = [demo['ee_velocity'][:, :3] for demo in data]
         self.acc = []
-        self.dt = 0.01
+        self.dt = data[0]['dt']
 
         return self
 
