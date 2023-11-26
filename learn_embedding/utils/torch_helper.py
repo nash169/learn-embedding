@@ -25,14 +25,16 @@ class TorchHelper():
         for p in model.parameters():
             p.data.fill_(0)
 
-    # @staticmethod
-    # def grid_uniform(center, length, samples=1):
-    #     a = [center[0] - length, center[1] - length]
-    #     b = [center[0] + length, center[1] + length]
-    #     return torch.cat((torch.FloatTensor(samples, 1).uniform_(a[0], b[0]), torch.FloatTensor(samples, 1).uniform_(a[1], b[1])), dim=1)
-
     @staticmethod
     def grid_uniform(center, la, lb, samples=1):
         a = [center[0] - la, center[1] - lb]
         b = [center[0] + la, center[1] + lb]
         return torch.cat((torch.FloatTensor(samples, 1).uniform_(a[0], b[0]), torch.FloatTensor(samples, 1).uniform_(a[1], b[1])), dim=1)
+
+    @staticmethod
+    def generalized_sigmoid(x, b=1.0, a=0.0, k=1.0, m=0.0):
+        # b: growth rate
+        # a: left horizontal asymptote
+        # k: right horizontal asymptote
+        # m: start
+        return (k-a) / (1. + torch.exp(-b * (x - m))) + a
