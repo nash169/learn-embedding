@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from typing import Optional
+
 import torch
 import torch.nn as nn
 
@@ -22,22 +24,23 @@ class Obstacles:
 
 
 class KernelDeformation(nn.Module):
-    def __init__(self, samples, weights=None, kernel=None, tol=-0.1):
+    def __init__(self, samples, 
+                 kernel: Optional[nn.Module] = SquaredExp(),
+                 weights: Optional[torch.Tensor] = None, 
+                 requires_grad: Optional[bool] = False,
+                 tolerance: Optional[float] = 0.0):
         super(KernelDeformation, self).__init__()
 
         self._samples = samples
 
+        self._kernel = kernel
+
         if weights is not None:
-            self._weights = weights
+            self._weights = nn.Parameter(weights, requires_grad=requires_grad)
         else:
-            self._weights = nn.Parameter(torch.ones(samples.shape[0]), requires_grad=True)
+            self._weights = nn.Parameter(torch.ones(samples.shape[0]), requires_grad=requires_grad)
 
-        if kernel is not None:
-            self._kernel = kernel
-        else:
-            self._kernel = SquaredExp()
-
-        self._tol = tol
+        self._tol = tolerance # used only for velocity dependent local deformation
 
     def forward(self, x, v=None):
         if v is not None:
@@ -62,7 +65,7 @@ class KernelDeformation(nn.Module):
                 # alphas[mask] *= TorchHelper.generalized_sigmoid(v_dist[mask], b=1.0e6, m=self.tol)
 
                 alphas = TorchHelper.generalized_sigmoid(v_dist, b=1.0e6, m=self.tol)*self.weights.view(-1, 1)
-                print(alphas.view(1, -1))
+                # print(alphas.view(1, -1))
                 # alphas = TorchHelper.generalized_sigmoid(cos_kernel, b=1.0e6, m=self.tol)*self.weights.view(-1, 1)
 
             return torch.sum(self.kernel(self._samples, x)*alphas, axis=0).view(-1, 1)

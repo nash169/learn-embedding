@@ -7,5 +7,6 @@ from .torch_helper import TorchHelper
 from .trainer import Trainer
 from .integrator import Integrator
 from .obstacles import Obstacles, KernelDeformation
+from .bump import BumpKNN
 
-__all__ = ["DataProcess", "LasaHandwriting", "RoboticDemos", "TorchHelper", "Trainer", "Integrator", "Obstacles", "KernelDeformation"]
+__all__ = ["DataProcess", "LasaHandwriting", "RoboticDemos", "TorchHelper", "Trainer", "Integrator", "Obstacles", "KernelDeformation", "BumpKNN"]

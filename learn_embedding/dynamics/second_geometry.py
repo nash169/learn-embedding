@@ -10,7 +10,9 @@ from ..utils.torch_helper import TorchHelper
 
 
 class SecondGeometry(nn.Module):
-    def __init__(self, embedding, attractor, stiffness: Optional[nn.Module] = Spherical(grad=False),  dissipation: Optional[nn.Module] = Spherical(grad=False)):
+    def __init__(self, embedding, attractor, 
+                 stiffness: Optional[nn.Module] = Spherical(grad=False),  
+                 dissipation: Optional[nn.Module] = Spherical(grad=False)):
         super(SecondGeometry, self).__init__()
 
         # Embedding
