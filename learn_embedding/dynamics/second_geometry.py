@@ -4,6 +4,7 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
+from torch.nn.functional import normalize
 
 from ..covariances.spherical import Spherical
 from ..utils.torch_helper import TorchHelper
@@ -37,8 +38,7 @@ class SecondGeometry(nn.Module):
         v = x[:, int(x.shape[1]/2):]
 
         # embedding
-        dx = p - self.attractor
-        y = self.embedding(p, (v, -dx)) if self.velocity_embedding else self.embedding(p)
+        y = self.embedding(p, v) if self.velocity_embedding else self.embedding(p)
 
         # jacobian
         j = self.embedding.jacobian(p, y)
@@ -50,14 +50,15 @@ class SecondGeometry(nn.Module):
         g = self.embedding.christoffel(p, m)
 
         # potential energy
-        f = self.stiffness(dx)
+        f = self.stiffness(p - self.attractor)
 
         # dissipation energy
         f += self.dissipation(v)
 
         # directional dissipation
         if hasattr(self, 'field'):
-            f += self.field_weight*(v - self.field(p))
+            # f += self.field_weight*(v - self.field(p))
+            f += self.field_weight*(normalize(v,p=2,dim=1) - normalize(self.field(p),p=2,dim=1))
 
         # exponential dissipation
         if hasattr(self, 'exp_dissipation'):
@@ -66,10 +67,8 @@ class SecondGeometry(nn.Module):
         # dynamic harmonic components
         if hasattr(self.embedding, 'local_deformation'):
             with torch.no_grad():
-                d = self.embedding.local_deformation(p, (v, -dx))
+                d = self.embedding.local_deformation(p, v)
                 harmonic_weight = TorchHelper.generalized_sigmoid(d, b=self.harmonic_growth, a=1.0, k=0.0, m=self.harmonic_start)
-                # harmonic_weight = torch.ones(x.shape[0], 1).to(x.device)
-                # harmonic_weight[self.embedding.local_deformation(p, v) >= 0.01] = 0.0
         else:
             harmonic_weight = 1.0
 
