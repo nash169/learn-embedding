@@ -45,29 +45,9 @@ class KernelDeformation(nn.Module):
     def forward(self, x, v=None):
         if v is not None:
             with torch.no_grad():
-                #
-                vel = v[0]
-                dx = v[1]
-                # num reference locations, num test locations, problem dimension
                 dist = self.samples.unsqueeze(1) - x
-                #
-                vel_dx = torch.nan_to_num(torch.sum(vel.div(vel.norm(dim=1).unsqueeze(-1)) * dx.div(dx.norm(dim=1).unsqueeze(-1)), dim=1), nan=-1)
-                dist_dx = torch.nan_to_num(torch.einsum('kij,ij->ki', dist.div(torch.linalg.norm(dist, dim=2).unsqueeze(-1)), dx.div(dx.norm(dim=1).unsqueeze(-1))), nan=-1)
-                mask = vel_dx > dist_dx
-
-                # num reference locations, num test locations
-                # cosine kernel between each reference and test location
-                # cos_kernel = torch.nan_to_num(torch.einsum('kij,ij->ki', dist.div(torch.linalg.norm(dist, dim=2).unsqueeze(-1)), v.div(v.norm(dim=1).unsqueeze(-1))), nan=-1)
-                v_dist = torch.nan_to_num(torch.einsum('kij,ij->ki', dist.div(torch.linalg.norm(dist, dim=2).unsqueeze(-1)), vel.div(vel.norm(dim=1).unsqueeze(-1))), nan=-1)
-
-                # weights scaled by the generalized sigmoid function
-                # alphas = self.weights.view(-1, 1)
-                # alphas[mask] *= TorchHelper.generalized_sigmoid(v_dist[mask], b=1.0e6, m=self.tol)
-
-                alphas = TorchHelper.generalized_sigmoid(v_dist, b=1.0e6, m=self.tol)*self.weights.view(-1, 1)
-                # print(alphas.view(1, -1))
-                # alphas = TorchHelper.generalized_sigmoid(cos_kernel, b=1.0e6, m=self.tol)*self.weights.view(-1, 1)
-
+                cos_kernel = torch.nan_to_num(torch.einsum('kij,ij->ki', dist.div(torch.linalg.norm(dist, dim=2).unsqueeze(-1)), v.div(v.norm(dim=1).unsqueeze(-1))), nan=-1)
+                alphas = TorchHelper.generalized_sigmoid(cos_kernel, b=1.0e6, m=self.tol)*self.weights.view(-1, 1)
             return torch.sum(self.kernel(self._samples, x)*alphas, axis=0).view(-1, 1)
         else:
             return torch.mv(self.kernel(self._samples, x).T, self.weights).unsqueeze(1)
