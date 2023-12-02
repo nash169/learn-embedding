@@ -11,8 +11,8 @@ from ..utils.torch_helper import TorchHelper
 
 
 class SecondGeometry(nn.Module):
-    def __init__(self, embedding, attractor, 
-                 stiffness: Optional[nn.Module] = Spherical(grad=False),  
+    def __init__(self, embedding, attractor,
+                 stiffness: Optional[nn.Module] = Spherical(grad=False),
                  dissipation: Optional[nn.Module] = Spherical(grad=False)):
         super(SecondGeometry, self).__init__()
 
@@ -58,7 +58,7 @@ class SecondGeometry(nn.Module):
         # directional dissipation
         if hasattr(self, 'field'):
             # f += self.field_weight*(v - self.field(p))
-            f += self.field_weight*(normalize(v,p=2,dim=1) - normalize(self.field(p),p=2,dim=1))
+            f += self.field_weight*(normalize(v, p=2, dim=1) - normalize(self.field(p), p=2, dim=1))
 
         # exponential dissipation
         if hasattr(self, 'exp_dissipation'):
