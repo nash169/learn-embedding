@@ -52,8 +52,11 @@ class SecondGeometry(nn.Module):
         # potential energy
         f = self.stiffness(p - self.attractor)
 
+        # metric free forces
+        f_d = torch.zeros_like(p).to(x.device)
+
         # dissipation energy
-        f += self.dissipation(v)
+        f_d += self.dissipation(v)
 
         # directional dissipation
         if hasattr(self, 'field'):
@@ -62,10 +65,10 @@ class SecondGeometry(nn.Module):
 
         # exponential dissipation
         if hasattr(self, 'exp_dissipation'):
-            f += self.exp_dissipation_weight*self.exp_dissipation(p, self.attractor.unsqueeze(0))*v
+            f_d += self.exp_dissipation_weight*self.exp_dissipation(p, self.attractor.unsqueeze(0))*v
 
         # dynamic harmonic components
-        if hasattr(self.embedding, 'local_deformation'):
+        if hasattr(self.embedding, 'local_deformation') and hasattr(self, 'harmonic_start'):
             with torch.no_grad():
                 d = self.embedding.local_deformation(p, v)
                 harmonic_weight = TorchHelper.generalized_sigmoid(d, b=self.harmonic_growth, a=1.0, k=0.0, m=self.harmonic_start)
@@ -73,8 +76,9 @@ class SecondGeometry(nn.Module):
             harmonic_weight = 1.0
 
         f *= harmonic_weight
+        f_d *= harmonic_weight
 
-        return (torch.bmm(m.inverse(), -f.unsqueeze(2)) - torch.bmm(torch.einsum('bqij,bi->bqj', g, v), v.unsqueeze(2))).squeeze(2)
+        return (torch.bmm(m.inverse(), -f.unsqueeze(2)) - torch.bmm(torch.einsum('bqij,bi->bqj', g, v), v.unsqueeze(2))).squeeze(2) - f_d
 
     def geodesic(self, x):
         # data
