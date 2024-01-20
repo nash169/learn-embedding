@@ -79,6 +79,34 @@ class SecondGeometry(nn.Module):
         f_d *= harmonic_weight
 
         return (torch.bmm(m.inverse(), -f.unsqueeze(2)) - torch.bmm(torch.einsum('bqij,bi->bqj', g, v), v.unsqueeze(2))).squeeze(2) - f_d
+    
+    def forward_fast(self, x):
+        p = x[:, :int(x.shape[1]/2)]
+        v = x[:, int(x.shape[1]/2):]
+
+        y = self.embedding(p, v) if self.velocity_embedding else self.embedding(p)
+        j = self.embedding.jacobian(p, y)
+        m = self.embedding.pullmetric(y, j)
+        g = self.embedding.christoffel_first(p, m)
+
+        f_k = self.stiffness(self.attractor - p)
+        f_d = self.dissipation(v)
+        if hasattr(self, 'field'):
+            f_d += self.field_weight*(normalize(v, p=2, dim=1) - normalize(self.field(p), p=2, dim=1))
+        if hasattr(self, 'exp_dissipation'):
+            f_d += self.exp_dissipation_weight*self.exp_dissipation(p, self.attractor.unsqueeze(0))*v
+
+        if hasattr(self.embedding, 'local_deformation') and hasattr(self, 'harmonic_start'):
+            with torch.no_grad():
+                harmonic_weight = TorchHelper.generalized_sigmoid(self.embedding.local_deformation(p, v), b=self.harmonic_growth, a=1.0, k=0.0, m=self.harmonic_start)
+        else:
+            harmonic_weight = 1.0
+
+        f_k *= harmonic_weight
+        f_d *= harmonic_weight
+
+        return torch.linalg.solve(m, f_k.unsqueeze(2) - torch.bmm(torch.einsum('bqij,bi->bqj', g, v), v.unsqueeze(2))).squeeze(2) - f_d
+
 
     def geodesic(self, x):
         # data

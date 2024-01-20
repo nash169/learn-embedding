@@ -60,6 +60,17 @@ class Embedding(nn.Module):
     def pullmetric(self, y, jac):
         return torch.bmm(jac.permute(0, 2, 1), torch.bmm(self.metric(y), jac))
         # return torch.matmul(jac.permute(0, 2, 1), jac)
+    
+    def christoffel_first(self, x, m):
+        dm = torch.empty(m.size(0), m.size(
+            1), m.size(2), x.size(1)).to(x.device)
+
+        for i in range(m.size(1)):
+            for j in range(m.size(2)):
+                dm[:, i, j, :] = torch.autograd.grad(
+                    m[:, i, j], x, grad_outputs=torch.ones_like(m[:, i, j]), create_graph=True)[0]
+
+        return 0.5*(dm + dm.permute(0,1,3,2) - dm.permute(0,3,2,1))
 
     def christoffel(self, x, m):
         im = m.inverse()
