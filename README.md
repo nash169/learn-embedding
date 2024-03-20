@@ -12,7 +12,11 @@ Paper: https://arxiv.org/abs/2403.11948
   <img width="30%" src="media/synthetic_first_field.png">
   <img width="30%" src="media/synthetic_flat_field.png">
   <img width="30%" src="media/synthetic_second_field.png">
-</p>   
+</p>
+
+Starting from a flat manifold, the manifold curvature adapts so the dynamical system streamlines match the demonstrated trajectories (red dots).
+On the left the first-order learned dynamical system.
+On the right the second-order learned dynamical system.
 
 ### Authors/Maintainers
 
