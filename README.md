@@ -1,5 +1,18 @@
 # Learn Embedding
-Repository containing the code to non-linear dynamical system higher dimension space deformation.
+Repository containing the code to learn stable dynamical system encoding non-linearity within underlying manifold's curvature.
+Paper: https://arxiv.org/abs/2403.11948
+
+<p align="center">
+  <img width="30%" src="media/synthetic_first_embedding.png">
+  <img width="30%" src="media/synthetic_flat_embedding.png">
+  <img width="30%" src="media/synthetic_second_embedding.png">
+</p>
+
+<p align="center">
+  <img width="30%" src="media/synthetic_first_field.png">
+  <img width="30%" src="media/synthetic_flat_field.png">
+  <img width="30%" src="media/synthetic_second_field.png">
+</p>   
 
 ### Authors/Maintainers
 
